@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <rect width="512" height="512" fill="#0a0a0d"/>
+  <path d="M 130 200 Q 130 100 230 100 Q 256 80 282 100 Q 382 100 382 200 Q 410 230 380 260 Q 410 290 380 320 Q 382 420 282 420 Q 256 432 230 420 Q 130 420 130 320 Q 100 290 130 260 Q 100 230 130 200 Z"
+        fill="#fb923c" stroke="#c2410c" stroke-width="6"/>
+  <g stroke="#c2410c" stroke-width="4" fill="none" opacity="0.6">
+    <path d="M 200 160 Q 230 200 200 240 Q 230 280 200 320"/>
+    <path d="M 312 160 Q 282 200 312 240 Q 282 280 312 320"/>
+  </g>
+  <text x="256" y="265" text-anchor="middle" dominant-baseline="central"
+        font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif"
+        font-weight="800" font-size="120" fill="#1a1004">Es</text>
+</svg>

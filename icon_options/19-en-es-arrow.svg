@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <rect width="512" height="512" fill="#0a0a0d"/>
+  <text x="120" y="180" text-anchor="middle" dominant-baseline="central"
+        font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif"
+        font-weight="800" font-size="120" fill="#fbbf24">EN</text>
+  <path d="M 80 290 L 380 290" stroke="#fb923c" stroke-width="36" stroke-linecap="round"/>
+  <polygon points="370,250 442,290 370,330" fill="#fb923c"/>
+  <text x="396" y="420" text-anchor="middle" dominant-baseline="central"
+        font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif"
+        font-weight="800" font-size="120" fill="#fb923c">ES</text>
+</svg>

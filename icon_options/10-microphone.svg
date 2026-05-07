@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <rect width="512" height="512" fill="#fb923c"/>
+  <g fill="none" stroke="#1a1004" stroke-width="22" stroke-linecap="round" stroke-linejoin="round">
+    <rect x="216" y="100" width="80" height="200" rx="40" fill="#1a1004"/>
+    <path d="M 156 230 Q 156 320 256 320 Q 356 320 356 230"/>
+    <line x1="256" y1="320" x2="256" y2="380"/>
+    <line x1="200" y1="380" x2="312" y2="380"/>
+  </g>
+  <text x="256" y="450" text-anchor="middle" dominant-baseline="central"
+        font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif"
+        font-weight="800" font-size="48" fill="#1a1004">ESPAÑOL</text>
+</svg>

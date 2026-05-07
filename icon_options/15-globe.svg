@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <rect width="512" height="512" fill="#0a0a0d"/>
+  <circle cx="256" cy="256" r="180" fill="#60a5fa"/>
+  <g fill="#fb923c">
+    <ellipse cx="180" cy="200" rx="50" ry="28"/>
+    <path d="M 280 195 Q 320 195 340 230 Q 320 270 280 260 Z"/>
+    <ellipse cx="200" cy="320" rx="80" ry="36"/>
+    <ellipse cx="340" cy="330" rx="36" ry="22"/>
+  </g>
+  <g stroke="#1a1004" stroke-width="2" fill="none" opacity="0.4">
+    <ellipse cx="256" cy="256" rx="180" ry="60"/>
+    <ellipse cx="256" cy="256" rx="60" ry="180"/>
+  </g>
+  <text x="256" y="256" text-anchor="middle" dominant-baseline="central"
+        font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif"
+        font-weight="800" font-size="80" fill="#fff5e1">Es</text>
+</svg>

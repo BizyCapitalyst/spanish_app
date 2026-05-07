@@ -1,15 +1,11 @@
-<?xml version="1.0" encoding="UTF-8"?>
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
-  <!-- Spanish Trainer — conjugation grid icon
-       Yellow (#fbbf24) full-bleed background, dark grid lines and labels
-       showing yo/tú/él with their regular -ar present-tense endings. -->
   <rect width="512" height="512" fill="#fbbf24"/>
   <g stroke="#1a1004" stroke-width="6" fill="none">
     <line x1="256" y1="80" x2="256" y2="432"/>
     <line x1="80" y1="190" x2="432" y2="190"/>
     <line x1="80" y1="300" x2="432" y2="300"/>
   </g>
-  <g fill="#1a1004" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-weight="800" font-size="64" text-anchor="middle">
+  <g fill="#1a1004" font-family="-apple-system, sans-serif" font-weight="800" font-size="64" text-anchor="middle">
     <text x="170" y="155">yo</text>
     <text x="170" y="265">tú</text>
     <text x="170" y="375">él</text>

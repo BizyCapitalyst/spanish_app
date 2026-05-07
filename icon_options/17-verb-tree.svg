@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <rect width="512" height="512" fill="#fb923c"/>
+  <g stroke="#1a1004" stroke-width="14" stroke-linecap="round" fill="none">
+    <line x1="256" y1="430" x2="256" y2="280"/>
+    <line x1="256" y1="280" x2="140" y2="180"/>
+    <line x1="256" y1="280" x2="372" y2="180"/>
+    <line x1="140" y1="180" x2="80" y2="100"/>
+    <line x1="140" y1="180" x2="200" y2="100"/>
+    <line x1="372" y1="180" x2="312" y2="100"/>
+    <line x1="372" y1="180" x2="432" y2="100"/>
+  </g>
+  <g fill="#1a1004">
+    <circle cx="256" cy="430" r="22"/>
+    <circle cx="80" cy="100" r="14"/>
+    <circle cx="200" cy="100" r="14"/>
+    <circle cx="312" cy="100" r="14"/>
+    <circle cx="432" cy="100" r="14"/>
+  </g>
+  <text x="256" y="430" text-anchor="middle" dominant-baseline="central"
+        font-family="-apple-system, sans-serif" font-weight="800" font-size="22" fill="#fbbf24">V</text>
+</svg>

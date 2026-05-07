@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <rect width="512" height="512" fill="#0a0a0d"/>
+  <g stroke="#fbbf24" stroke-width="22" stroke-linecap="round">
+    <line x1="256" y1="40" x2="256" y2="100"/>
+    <line x1="256" y1="412" x2="256" y2="472"/>
+    <line x1="40" y1="256" x2="100" y2="256"/>
+    <line x1="412" y1="256" x2="472" y2="256"/>
+    <line x1="103" y1="103" x2="146" y2="146"/>
+    <line x1="366" y1="366" x2="409" y2="409"/>
+    <line x1="103" y1="409" x2="146" y2="366"/>
+    <line x1="366" y1="146" x2="409" y2="103"/>
+  </g>
+  <circle cx="256" cy="256" r="120" fill="#fb923c"/>
+  <text x="256" y="256" text-anchor="middle" dominant-baseline="central"
+        font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif"
+        font-weight="800" font-size="120" fill="#1a1004">Es</text>
+</svg>
