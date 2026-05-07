@@ -3677,7 +3677,7 @@ const SPEECH_LANG_KEY = 'spanishApp.speechLang.v1';
 const langBtn = document.getElementById('langBtn');
 const micBtn  = document.getElementById('micBtn');
 let speechLang = (function() {
-  try { return localStorage.getItem(SPEECH_LANG_KEY) || 'en-US'; } catch (e) { return 'en-US'; }
+  try { return localStorage.getItem(SPEECH_LANG_KEY) || 'es-ES'; } catch (e) { return 'es-ES'; }
 })();
 function updateLangBtn() {
   const isEs = speechLang === 'es-ES';
