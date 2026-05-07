@@ -1,6 +1,6 @@
 // Cache-first service worker — caches the app shell so it works offline
 // after first load. Bump CACHE_VERSION whenever you ship a new build.
-const CACHE_VERSION = 'spanish-trainer-v11';
+const CACHE_VERSION = 'spanish-trainer-v12';
 const ASSETS = [
   './',
   './index.html',
