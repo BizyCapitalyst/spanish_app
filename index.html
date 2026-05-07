@@ -1,0 +1,3643 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+<meta name="theme-color" content="#0a0a0d" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="apple-mobile-web-app-title" content="Spanish" />
+<meta name="mobile-web-app-capable" content="yes" />
+<link rel="manifest" href="manifest.json" />
+<link rel="icon" type="image/svg+xml" href="icon.svg" />
+<link rel="apple-touch-icon" href="icon.svg" />
+<title>Spanish Trainer</title>
+<style>
+  :root {
+    --bg:           #0a0a0d;
+    --bg-elevated:  #14141a;
+    --bg-card:      #16161d;
+    --bg-tile:      #1c1c25;
+    --bg-input:     #1f1f29;
+    --bg-hover:     #23232f;
+    --border:       #26262f;
+    --border-soft:  #1e1e26;
+    --text:         #ededf0;
+    --text-mid:     #a8a8b3;
+    --text-dim:     #6a6a76;
+    --accent:       #fbbf24;
+    --accent-hi:    #fcd34d;
+    --accent-soft:  rgba(251, 191, 36, 0.12);
+    --accent-glow:  rgba(251, 191, 36, 0.25);
+    /* Orange palette — used for the top nav menu, tile tense labels,
+       and the chosen Spanish verb. --orange-muted is the same hue as
+       --orange (#fb923c) but with saturation pulled down (~95% → 65%)
+       so it's softer, not a different shade. */
+    --orange:       #fb923c;
+    --orange-hi:    #fdba74;
+    --orange-muted: #dc9466;
+    --orange-soft:  rgba(251, 146, 60, 0.13);
+    --orange-deep:  #c2410c;
+    --blue:         #60a5fa;
+    --blue-soft:    rgba(96, 165, 250, 0.13);
+    --blue-glow:    rgba(96, 165, 250, 0.28);
+    --good:         #34d399;
+    --bad:          #f87171;
+    --radius:       14px;
+    --radius-sm:    10px;
+    --shadow-card:  0 1px 0 rgba(255,255,255,0.04) inset, 0 8px 24px -12px rgba(0,0,0,0.5);
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body {
+    margin: 0;
+    padding: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Inter", Roboto, sans-serif;
+    font-size: 15px;
+    line-height: 1.45;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+    overscroll-behavior-y: contain;
+  }
+  body::before {
+    content: "";
+    position: fixed;
+    top: -200px; left: 50%;
+    width: 600px; height: 400px;
+    background: radial-gradient(ellipse at center, rgba(251,191,36,0.06), transparent 65%);
+    transform: translateX(-50%);
+    pointer-events: none;
+    z-index: 0;
+  }
+  .app {
+    position: relative;
+    z-index: 1;
+    max-width: 480px;
+    margin: 0 auto;
+    padding: 14px 14px 80px;
+    min-height: 100vh;
+  }
+
+  /* HEADER */
+  header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 6px 4px 18px;
+  }
+  header .title {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  header .logo {
+    width: 32px; height: 32px;
+    border-radius: 9px;
+    background: linear-gradient(135deg, var(--accent), #d97706);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    color: #1a1004;
+    font-size: 16px;
+    box-shadow: 0 4px 14px -4px var(--accent-glow);
+  }
+  header h1 {
+    margin: 0;
+    font-size: 17px;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+  }
+  header .sub {
+    color: var(--text-dim);
+    font-size: 11px;
+    margin-top: 1px;
+  }
+
+  /* NAV */
+  nav {
+    display: flex;
+    gap: 4px;
+    margin-bottom: 14px;
+    background: var(--bg-elevated);
+    padding: 4px;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--border-soft);
+  }
+  nav button {
+    flex: 1;
+    background: transparent;
+    color: var(--orange-hi);
+    border: none;
+    padding: 8px 10px;
+    border-radius: 7px;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 500;
+    font-family: inherit;
+    transition: all 0.15s;
+    opacity: 0.55;
+  }
+  nav button.active {
+    background: var(--bg-card);
+    color: var(--orange);
+    opacity: 1;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.3);
+  }
+  nav button:disabled { opacity: 0.35; cursor: not-allowed; }
+
+  /* CARD */
+  .card {
+    background: var(--bg-card);
+    border: 1px solid var(--border-soft);
+    border-radius: var(--radius);
+    padding: 14px;
+    margin-bottom: 12px;
+    box-shadow: var(--shadow-card);
+  }
+  .card-collapsible > .card-header {
+    cursor: pointer;
+    user-select: none;
+  }
+  .card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 12px;
+  }
+  .card-title {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+  .card-actions {
+    display: flex;
+    gap: 6px;
+  }
+  .chip-btn {
+    background: var(--bg-tile);
+    color: var(--text-mid);
+    border: 1px solid var(--border);
+    padding: 4px 10px;
+    border-radius: 999px;
+    cursor: pointer;
+    font-size: 11px;
+    font-family: inherit;
+    font-weight: 500;
+    transition: all 0.15s;
+  }
+  .chip-btn:hover, .chip-btn:active {
+    background: var(--bg-hover);
+    color: var(--text);
+  }
+  .caret {
+    width: 16px; height: 16px;
+    color: var(--text-dim);
+    transition: transform 0.2s;
+  }
+  .card-collapsible.collapsed .caret { transform: rotate(-90deg); }
+  .card-collapsible.collapsed .card-body { display: none; }
+
+  /* MOOD GROUPS */
+  .mood-group { margin-bottom: 10px; }
+  .mood-group:last-child { margin-bottom: 0; }
+  .mood-header {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin: 0 0 8px;
+    padding: 6px 8px;
+    background: var(--bg-tile);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-mid);
+    cursor: pointer;
+    user-select: none;
+    transition: background 0.15s;
+  }
+  .mood-header:hover, .mood-header:active { background: var(--bg-hover); }
+  .mood-header .caret {
+    width: 12px; height: 12px;
+    color: var(--text-dim);
+    transition: transform 0.2s;
+  }
+  .mood-group.collapsed .caret { transform: rotate(-90deg); }
+  .mood-group.collapsed .toggles { display: none; }
+  .mood-header .name { flex: 1; }
+  .mood-header .count {
+    font-size: 10px;
+    font-weight: 500;
+    color: var(--text-dim);
+    background: var(--bg-card);
+    padding: 2px 7px;
+    border-radius: 999px;
+    border: 1px solid var(--border-soft);
+  }
+  .mood-header .count.has-active {
+    color: var(--accent);
+    border-color: rgba(251,191,36,0.3);
+  }
+  .toggles {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+  .toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 7px 12px 7px 10px;
+    background: var(--bg-tile);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+    user-select: none;
+    transition: all 0.15s;
+    color: var(--text-mid);
+    min-height: 32px;
+    line-height: 1.25;
+  }
+  .toggle .text {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1px;
+  }
+  .toggle:active { transform: scale(0.97); }
+  .toggle.on {
+    background: var(--accent-soft);
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+  .toggle .dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--text-dim);
+    transition: background 0.15s;
+    flex-shrink: 0;
+  }
+  .toggle.on .dot {
+    background: var(--accent);
+    box-shadow: 0 0 6px var(--accent-glow);
+  }
+  .toggle .ex {
+    color: var(--text-dim);
+    font-weight: 400;
+    font-size: 10px;
+    font-style: italic;
+  }
+  .toggle.on .ex {
+    color: var(--accent);
+    opacity: 0.65;
+  }
+
+  /* Pronoun filter — 2-column grid mimicking Spanish conjugation layout
+     left (singular): yo / tú / él · right (plural): nosotros / vosotros placeholder / ellos */
+  #pronounToggles {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+  }
+  #pronounToggles .toggle {
+    justify-content: flex-start;
+    border-radius: 10px;
+  }
+  #pronounToggles .toggle.placeholder {
+    opacity: 0.35;
+    pointer-events: none;
+    border-style: dashed;
+    background: transparent;
+  }
+  #pronounToggles .toggle.placeholder .label {
+    text-decoration: line-through;
+    color: var(--text-dim);
+  }
+  /* Active pronoun toggles use blue (vs the yellow accent of tense toggles) */
+  #pronounToggles .toggle.on {
+    background: var(--blue-soft);
+    border-color: var(--blue);
+    color: var(--blue);
+  }
+  #pronounToggles .toggle.on .dot {
+    background: var(--blue);
+    box-shadow: 0 0 6px var(--blue-glow);
+  }
+
+  /* INPUT */
+  .input-wrap {
+    position: relative;
+  }
+  .verb-input {
+    width: 100%;
+    background: var(--bg-input);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 14px 16px;
+    border-radius: var(--radius-sm);
+    font-size: 16px;
+    font-family: inherit;
+    transition: border-color 0.15s, box-shadow 0.15s;
+  }
+  .verb-input::placeholder { color: var(--text-dim); }
+  .verb-input {
+    padding-left: 80px;   /* room for left-side EN/ES toggle */
+    padding-right: 92px;  /* room for mic + clear on right */
+    position: relative;
+    z-index: 0;
+  }
+  .verb-input:focus {
+    outline: none;
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px var(--accent-soft);
+  }
+  .input-btns {
+    position: absolute;
+    right: 6px;
+    top: 50%;
+    transform: translateY(-50%);
+    display: flex;
+    gap: 4px;
+    align-items: center;
+    z-index: 2;
+  }
+  .input-btns button {
+    background: var(--bg-tile);
+    border: 1px solid var(--border);
+    color: var(--text-dim);
+    height: 32px;
+    border-radius: 7px;
+    cursor: pointer;
+    font-size: 12px;
+    line-height: 1;
+    font-family: inherit;
+    padding: 0 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .input-btns button:active { transform: scale(0.95); }
+  .lang-btn {
+    position: absolute;
+    left: 6px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: var(--bg-tile);
+    border: 1px solid var(--border);
+    color: var(--text-mid);
+    height: 36px;
+    width: 62px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    z-index: 2;
+  }
+  .lang-btn:active { transform: translateY(-50%) scale(0.96); }
+  .lang-btn[data-lang="en"] {
+    background: var(--accent-soft);
+    color: var(--accent);
+    border-color: rgba(251,191,36,0.38);
+  }
+  .lang-btn[data-lang="es"] {
+    background: var(--orange-soft);
+    color: var(--orange);
+    border-color: rgba(251,146,60,0.38);
+  }
+  .mic-btn {
+    width: 32px;
+    padding: 0 !important;
+  }
+  .mic-btn.recording {
+    background: var(--bad);
+    color: white;
+    border-color: var(--bad);
+    animation: pulse 1s infinite;
+  }
+  .mic-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+  @keyframes pulse {
+    0%,100% { box-shadow: 0 0 0 0 rgba(248,113,113,0.5); }
+    50%     { box-shadow: 0 0 0 6px rgba(248,113,113,0); }
+  }
+  .clear-btn {
+    background: var(--bg-tile);
+    border: 1px solid var(--border);
+    color: var(--text-dim);
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    cursor: pointer;
+    font-size: 16px;
+    line-height: 1;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+  }
+  .clear-btn.visible { display: flex; }
+
+  /* RESULT */
+  .verb-result {
+    color: var(--text-mid);
+    font-size: 13px;
+    margin-top: 10px;
+    min-height: 18px;
+  }
+  .verb-result strong {
+    color: var(--blue);
+    font-size: 17px;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+  }
+  .verb-result .pill {
+    display: inline-block;
+    background: var(--bg-tile);
+    border: 1px solid var(--border);
+    color: var(--text-dim);
+    padding: 1px 8px;
+    border-radius: 999px;
+    font-size: 10px;
+    margin-left: 6px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    font-weight: 500;
+  }
+  .verb-result.warn { color: var(--bad); font-size: 13px; }
+
+  /* SUGGESTIONS */
+  .suggestions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 12px;
+  }
+  .suggestions .label {
+    font-size: 11px;
+    color: var(--text-dim);
+    align-self: center;
+    margin-right: 2px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+
+  /* TILES */
+  .tiles {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  .verb-header {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+    padding: 14px 16px;
+    background: linear-gradient(180deg, var(--bg-card), var(--bg-tile));
+    border: 1px solid var(--border-soft);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow-card);
+  }
+  .verb-header .es {
+    font-size: 20px;
+    font-weight: 600;
+    color: var(--blue);
+    letter-spacing: -0.01em;
+  }
+  .verb-header .pp {
+    font-size: 11px;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+  .verb-header .pp em {
+    color: var(--text-mid);
+    font-style: normal;
+    font-weight: 500;
+    text-transform: none;
+    letter-spacing: 0;
+  }
+  .verb-header .pp-en {
+    margin-left: 6px;
+    color: var(--text-dim);
+    font-style: italic;
+    font-weight: 400;
+    text-transform: none;
+    letter-spacing: 0;
+  }
+  .tile {
+    background: var(--bg-card);
+    border: 1px solid var(--border-soft);
+    border-radius: var(--radius);
+    padding: 14px 16px;
+    box-shadow: var(--shadow-card);
+  }
+  .tile-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    margin-bottom: 8px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--border-soft);
+  }
+  .tile-head .label {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--accent);
+    letter-spacing: -0.005em;
+  }
+  .tile-head .es-name {
+    font-size: 10px;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+  .tile-example {
+    text-align: left;
+    color: var(--text-dim);
+    font-size: 12px;
+    font-weight: 500;
+    margin-bottom: 8px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--border-soft);
+  }
+  .row {
+    display: grid;
+    grid-template-columns: 38% 1fr;
+    gap: 8px;
+    padding: 8px 0;
+    border-bottom: 1px solid var(--border-soft);
+    align-items: baseline;
+  }
+  .row:last-child { border-bottom: none; }
+  .row .pron {
+    color: var(--text-dim);
+    font-size: 12px;
+    font-weight: 500;
+  }
+  .row .form-cell {
+    /* Container for Spanish form (top) + English equivalent (bottom).
+       Both children align right against the row's right edge. */
+    min-width: 0;
+  }
+  .row .es-form {
+    text-align: right;
+    font-size: 15px;
+    font-weight: 500;
+    color: var(--text);
+    letter-spacing: -0.005em;
+  }
+  .row .en-form {
+    text-align: right;
+    display: block;
+    margin-top: 2px;
+    font-size: 11px;
+    color: var(--text-dim);
+    font-style: italic;
+    letter-spacing: 0;
+  }
+  .es-form .stem      { color: var(--blue); }
+  .es-form .dash      { display: none; }
+  .es-form .ending    { color: var(--orange); font-weight: 600; }
+  .es-form .participle{ color: var(--blue); margin-left: 4px; font-weight: 500; }
+
+  /* EMPTY */
+  .empty-state {
+    text-align: center;
+    color: var(--text-dim);
+    padding: 40px 20px;
+    font-size: 13px;
+    border: 1px dashed var(--border);
+    border-radius: var(--radius);
+    background: var(--bg-card);
+  }
+
+  footer {
+    text-align: center;
+    color: var(--text-dim);
+    font-size: 10px;
+    padding: 24px 0 8px;
+    letter-spacing: 0.02em;
+  }
+
+  /* DESKTOP TWEAKS */
+  @media (min-width: 600px) {
+    .app { padding-top: 24px; }
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <div class="title">
+      <div class="logo">Es</div>
+      <div>
+        <h1>Spanish Trainer</h1>
+        <div class="sub">Verb conjugation · vosotros excluded</div>
+      </div>
+    </div>
+  </header>
+
+  <nav>
+    <button class="active">Conjugation</button>
+    <button disabled title="Coming soon">Testing</button>
+    <button disabled title="Coming soon">Vocabulary</button>
+  </nav>
+
+  <div class="card card-collapsible" id="togglesCard">
+    <div class="card-header">
+      <div style="display:flex;align-items:center;gap:8px;">
+        <svg class="caret" viewBox="0 0 16 16" fill="currentColor"><path d="M4 6l4 4 4-4z"/></svg>
+        <span class="card-title">Tense toggles</span>
+      </div>
+      <div class="card-actions" onclick="event.stopPropagation()">
+        <button class="chip-btn" id="toggleAllOn">All</button>
+        <button class="chip-btn" id="toggleAllOff">None</button>
+        <button class="chip-btn" id="presetCore">Core 4</button>
+      </div>
+    </div>
+    <div class="card-body" id="moodGroups"></div>
+  </div>
+
+  <div class="card card-collapsible" id="pronounsCard">
+    <div class="card-header">
+      <div style="display:flex;align-items:center;gap:8px;">
+        <svg class="caret" viewBox="0 0 16 16" fill="currentColor"><path d="M4 6l4 4 4-4z"/></svg>
+        <span class="card-title">Pronoun toggles</span>
+      </div>
+      <div class="card-actions" onclick="event.stopPropagation()">
+        <button class="chip-btn" id="pronounAllOn">All</button>
+        <button class="chip-btn" id="pronounAllOff">None</button>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="toggles" id="pronounToggles"></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header">
+      <span class="card-title">English verb</span>
+    </div>
+    <div class="input-wrap">
+      <button class="lang-btn" id="langBtn" title="Search direction — tap to switch">EN</button>
+      <input id="verbInput" class="verb-input" type="text"
+             placeholder="English or Spanish… (speak, hablar, eat, comer)"
+             autocomplete="off" autocapitalize="none" autocorrect="off" spellcheck="false" />
+      <div class="input-btns">
+        <button class="mic-btn"  id="micBtn"  title="Speak verb (any language)" aria-label="speak">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"/>
+            <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
+            <line x1="12" y1="19" x2="12" y2="23"/>
+            <line x1="8" y1="23" x2="16" y2="23"/>
+          </svg>
+        </button>
+        <button class="clear-btn" id="clearBtn" aria-label="clear">×</button>
+      </div>
+    </div>
+    <div id="verbResult" class="verb-result"></div>
+    <div class="suggestions" id="suggestions"></div>
+  </div>
+
+  <div id="tiles" class="tiles"></div>
+  <div id="emptyState" class="empty-state" style="display:none">
+    Enter an English verb above to see conjugation tiles.
+  </div>
+
+  <footer>
+    Lives offline · save to home screen on Android
+  </footer>
+</div>
+
+<script>
+//=================================================================
+// PRONOUNS (vosotros excluded)
+//=================================================================
+const PRONOUNS_5 = ['yo', 'tú', 'él / ella / Ud.', 'nosotros', 'ellos / ellas / Uds.'];
+const PRONOUNS_IMP = ['tú', 'Ud.', 'nosotros', 'Uds.'];
+
+//=================================================================
+// TENSES
+//=================================================================
+const TENSES = [
+  { key: 'present',                mood: 'Indicative',  label: 'Present',              es: 'Presente',                       pronouns: PRONOUNS_5 },
+  { key: 'preterite',              mood: 'Indicative',  label: 'Preterite',            es: 'Pretérito indefinido',           pronouns: PRONOUNS_5 },
+  { key: 'imperfect',              mood: 'Indicative',  label: 'Imperfect',            es: 'Pretérito imperfecto',           pronouns: PRONOUNS_5 },
+  { key: 'future',                 mood: 'Indicative',  label: 'Future',               es: 'Futuro simple',                  pronouns: PRONOUNS_5 },
+  { key: 'conditional',            mood: 'Indicative',  label: 'Conditional',          es: 'Condicional simple',             pronouns: PRONOUNS_5 },
+  { key: 'present_perfect',        mood: 'Indicative',  label: 'Present perfect',      es: 'Pretérito perfecto',             pronouns: PRONOUNS_5 },
+  { key: 'pluperfect',             mood: 'Indicative',  label: 'Pluperfect',           es: 'Pluscuamperfecto',               pronouns: PRONOUNS_5 },
+  { key: 'future_perfect',         mood: 'Indicative',  label: 'Future perfect',       es: 'Futuro compuesto',               pronouns: PRONOUNS_5 },
+  { key: 'conditional_perfect',    mood: 'Indicative',  label: 'Conditional perfect',  es: 'Condicional compuesto',          pronouns: PRONOUNS_5 },
+  { key: 'present_subj',           mood: 'Subjunctive', label: 'Present subj.',        es: 'Presente de subjuntivo',         pronouns: PRONOUNS_5 },
+  { key: 'imperfect_subj',         mood: 'Subjunctive', label: 'Imperfect subj.',      es: 'Imperfecto de subjuntivo (-ra)', pronouns: PRONOUNS_5 },
+  { key: 'present_perfect_subj',   mood: 'Subjunctive', label: 'Pres. perfect subj.',  es: 'Pretérito perfecto de subj.',    pronouns: PRONOUNS_5 },
+  { key: 'pluperfect_subj',        mood: 'Subjunctive', label: 'Pluperfect subj.',     es: 'Pluscuamperfecto de subj.',      pronouns: PRONOUNS_5 },
+  { key: 'imperative_aff',         mood: 'Imperative',  label: 'Imperative (aff.)',    es: 'Imperativo afirmativo',          pronouns: PRONOUNS_IMP },
+  { key: 'imperative_neg',         mood: 'Imperative',  label: 'Imperative (neg.)',    es: 'Imperativo negativo',            pronouns: PRONOUNS_IMP },
+];
+
+const CORE_TENSES = ['present', 'preterite', 'imperfect', 'future'];
+
+// Examples are built dynamically by buildExample(tenseKey, currentEnglishBase)
+// based on whichever verb the user searched. Default: 'make'.
+let currentEnglishBase = 'be';
+
+//=================================================================
+// HABER — auxiliary for compound tenses
+//=================================================================
+const HABER = {
+  present:        ['he', 'has', 'ha', 'hemos', 'han'],
+  imperfect:      ['había', 'habías', 'había', 'habíamos', 'habían'],
+  future:         ['habré', 'habrás', 'habrá', 'habremos', 'habrán'],
+  conditional:    ['habría', 'habrías', 'habría', 'habríamos', 'habrían'],
+  present_subj:   ['haya', 'hayas', 'haya', 'hayamos', 'hayan'],
+  imperfect_subj: ['hubiera', 'hubieras', 'hubiera', 'hubiéramos', 'hubieran'],
+};
+
+//=================================================================
+// IRREGULAR VERB OVERLAY — only fields differing from regular pattern
+//=================================================================
+const IRREGULARS = {
+  ser: {
+    present:        ['soy', 'eres', 'es', 'somos', 'son'],
+    preterite:      ['fui', 'fuiste', 'fue', 'fuimos', 'fueron'],
+    imperfect:      ['era', 'eras', 'era', 'éramos', 'eran'],
+    present_subj:   ['sea', 'seas', 'sea', 'seamos', 'sean'],
+    imperfect_subj: ['fuera', 'fueras', 'fuera', 'fuéramos', 'fueran'],
+    participle: 'sido',
+    imperative_aff: ['sé', 'sea', 'seamos', 'sean'],
+  },
+  estar: {
+    present:        ['estoy', 'estás', 'está', 'estamos', 'están'],
+    preterite:      ['estuve', 'estuviste', 'estuvo', 'estuvimos', 'estuvieron'],
+    present_subj:   ['esté', 'estés', 'esté', 'estemos', 'estén'],
+    imperfect_subj: ['estuviera', 'estuvieras', 'estuviera', 'estuviéramos', 'estuvieran'],
+    imperative_aff: ['está', 'esté', 'estemos', 'estén'],
+  },
+  haber: {
+    present:        ['he', 'has', 'ha', 'hemos', 'han'],
+    preterite:      ['hube', 'hubiste', 'hubo', 'hubimos', 'hubieron'],
+    future_stem:    'habr',
+    present_subj:   ['haya', 'hayas', 'haya', 'hayamos', 'hayan'],
+    imperfect_subj: ['hubiera', 'hubieras', 'hubiera', 'hubiéramos', 'hubieran'],
+    imperative_aff: ['—', 'haya', 'hayamos', 'hayan'],
+  },
+  tener: {
+    present:        ['tengo', 'tienes', 'tiene', 'tenemos', 'tienen'],
+    preterite:      ['tuve', 'tuviste', 'tuvo', 'tuvimos', 'tuvieron'],
+    future_stem:    'tendr',
+    present_subj:   ['tenga', 'tengas', 'tenga', 'tengamos', 'tengan'],
+    imperfect_subj: ['tuviera', 'tuvieras', 'tuviera', 'tuviéramos', 'tuvieran'],
+    imperative_aff: ['ten', 'tenga', 'tengamos', 'tengan'],
+  },
+  ir: {
+    present:        ['voy', 'vas', 'va', 'vamos', 'van'],
+    preterite:      ['fui', 'fuiste', 'fue', 'fuimos', 'fueron'],
+    imperfect:      ['iba', 'ibas', 'iba', 'íbamos', 'iban'],
+    present_subj:   ['vaya', 'vayas', 'vaya', 'vayamos', 'vayan'],
+    imperfect_subj: ['fuera', 'fueras', 'fuera', 'fuéramos', 'fueran'],
+    imperative_aff: ['ve', 'vaya', 'vamos', 'vayan'],
+  },
+  hacer: {
+    present:        ['hago', 'haces', 'hace', 'hacemos', 'hacen'],
+    preterite:      ['hice', 'hiciste', 'hizo', 'hicimos', 'hicieron'],
+    future_stem:    'har',
+    present_subj:   ['haga', 'hagas', 'haga', 'hagamos', 'hagan'],
+    imperfect_subj: ['hiciera', 'hicieras', 'hiciera', 'hiciéramos', 'hicieran'],
+    participle: 'hecho',
+    imperative_aff: ['haz', 'haga', 'hagamos', 'hagan'],
+  },
+  decir: {
+    present:        ['digo', 'dices', 'dice', 'decimos', 'dicen'],
+    preterite:      ['dije', 'dijiste', 'dijo', 'dijimos', 'dijeron'],
+    future_stem:    'dir',
+    present_subj:   ['diga', 'digas', 'diga', 'digamos', 'digan'],
+    imperfect_subj: ['dijera', 'dijeras', 'dijera', 'dijéramos', 'dijeran'],
+    participle: 'dicho',
+    imperative_aff: ['di', 'diga', 'digamos', 'digan'],
+  },
+  ver: {
+    present:        ['veo', 'ves', 've', 'vemos', 'ven'],
+    preterite:      ['vi', 'viste', 'vio', 'vimos', 'vieron'],
+    imperfect:      ['veía', 'veías', 'veía', 'veíamos', 'veían'],
+    present_subj:   ['vea', 'veas', 'vea', 'veamos', 'vean'],
+    imperfect_subj: ['viera', 'vieras', 'viera', 'viéramos', 'vieran'],
+    participle: 'visto',
+    imperative_aff: ['ve', 'vea', 'veamos', 'vean'],
+  },
+  saber: {
+    present:        ['sé', 'sabes', 'sabe', 'sabemos', 'saben'],
+    preterite:      ['supe', 'supiste', 'supo', 'supimos', 'supieron'],
+    future_stem:    'sabr',
+    present_subj:   ['sepa', 'sepas', 'sepa', 'sepamos', 'sepan'],
+    imperfect_subj: ['supiera', 'supieras', 'supiera', 'supiéramos', 'supieran'],
+    imperative_aff: ['sabe', 'sepa', 'sepamos', 'sepan'],
+  },
+  conocer: {
+    present:        ['conozco', 'conoces', 'conoce', 'conocemos', 'conocen'],
+    present_subj:   ['conozca', 'conozcas', 'conozca', 'conozcamos', 'conozcan'],
+    imperative_aff: ['conoce', 'conozca', 'conozcamos', 'conozcan'],
+  },
+  poder: {
+    present:        ['puedo', 'puedes', 'puede', 'podemos', 'pueden'],
+    preterite:      ['pude', 'pudiste', 'pudo', 'pudimos', 'pudieron'],
+    future_stem:    'podr',
+    present_subj:   ['pueda', 'puedas', 'pueda', 'podamos', 'puedan'],
+    imperfect_subj: ['pudiera', 'pudieras', 'pudiera', 'pudiéramos', 'pudieran'],
+    imperative_aff: ['puede', 'pueda', 'podamos', 'puedan'],
+  },
+  querer: {
+    present:        ['quiero', 'quieres', 'quiere', 'queremos', 'quieren'],
+    preterite:      ['quise', 'quisiste', 'quiso', 'quisimos', 'quisieron'],
+    future_stem:    'querr',
+    present_subj:   ['quiera', 'quieras', 'quiera', 'queramos', 'quieran'],
+    imperfect_subj: ['quisiera', 'quisieras', 'quisiera', 'quisiéramos', 'quisieran'],
+    imperative_aff: ['quiere', 'quiera', 'queramos', 'quieran'],
+  },
+  venir: {
+    present:        ['vengo', 'vienes', 'viene', 'venimos', 'vienen'],
+    preterite:      ['vine', 'viniste', 'vino', 'vinimos', 'vinieron'],
+    future_stem:    'vendr',
+    present_subj:   ['venga', 'vengas', 'venga', 'vengamos', 'vengan'],
+    imperfect_subj: ['viniera', 'vinieras', 'viniera', 'viniéramos', 'vinieran'],
+    imperative_aff: ['ven', 'venga', 'vengamos', 'vengan'],
+  },
+  poner: {
+    present:        ['pongo', 'pones', 'pone', 'ponemos', 'ponen'],
+    preterite:      ['puse', 'pusiste', 'puso', 'pusimos', 'pusieron'],
+    future_stem:    'pondr',
+    present_subj:   ['ponga', 'pongas', 'ponga', 'pongamos', 'pongan'],
+    imperfect_subj: ['pusiera', 'pusieras', 'pusiera', 'pusiéramos', 'pusieran'],
+    participle: 'puesto',
+    imperative_aff: ['pon', 'ponga', 'pongamos', 'pongan'],
+  },
+  dar: {
+    present:        ['doy', 'das', 'da', 'damos', 'dan'],
+    preterite:      ['di', 'diste', 'dio', 'dimos', 'dieron'],
+    present_subj:   ['dé', 'des', 'dé', 'demos', 'den'],
+    imperfect_subj: ['diera', 'dieras', 'diera', 'diéramos', 'dieran'],
+    imperative_aff: ['da', 'dé', 'demos', 'den'],
+  },
+  salir: {
+    present:        ['salgo', 'sales', 'sale', 'salimos', 'salen'],
+    future_stem:    'saldr',
+    present_subj:   ['salga', 'salgas', 'salga', 'salgamos', 'salgan'],
+    imperative_aff: ['sal', 'salga', 'salgamos', 'salgan'],
+  },
+  traer: {
+    present:        ['traigo', 'traes', 'trae', 'traemos', 'traen'],
+    preterite:      ['traje', 'trajiste', 'trajo', 'trajimos', 'trajeron'],
+    present_subj:   ['traiga', 'traigas', 'traiga', 'traigamos', 'traigan'],
+    imperfect_subj: ['trajera', 'trajeras', 'trajera', 'trajéramos', 'trajeran'],
+    participle: 'traído',
+    imperative_aff: ['trae', 'traiga', 'traigamos', 'traigan'],
+  },
+  pensar: {
+    present:        ['pienso', 'piensas', 'piensa', 'pensamos', 'piensan'],
+    present_subj:   ['piense', 'pienses', 'piense', 'pensemos', 'piensen'],
+    imperative_aff: ['piensa', 'piense', 'pensemos', 'piensen'],
+  },
+  empezar: {
+    present:        ['empiezo', 'empiezas', 'empieza', 'empezamos', 'empiezan'],
+    preterite:      ['empecé', 'empezaste', 'empezó', 'empezamos', 'empezaron'],
+    present_subj:   ['empiece', 'empieces', 'empiece', 'empecemos', 'empiecen'],
+    imperative_aff: ['empieza', 'empiece', 'empecemos', 'empiecen'],
+  },
+  entender: {
+    present:        ['entiendo', 'entiendes', 'entiende', 'entendemos', 'entienden'],
+    present_subj:   ['entienda', 'entiendas', 'entienda', 'entendamos', 'entiendan'],
+    imperative_aff: ['entiende', 'entienda', 'entendamos', 'entiendan'],
+  },
+  volver: {
+    present:        ['vuelvo', 'vuelves', 'vuelve', 'volvemos', 'vuelven'],
+    present_subj:   ['vuelva', 'vuelvas', 'vuelva', 'volvamos', 'vuelvan'],
+    participle: 'vuelto',
+    imperative_aff: ['vuelve', 'vuelva', 'volvamos', 'vuelvan'],
+  },
+  encontrar: {
+    present:        ['encuentro', 'encuentras', 'encuentra', 'encontramos', 'encuentran'],
+    present_subj:   ['encuentre', 'encuentres', 'encuentre', 'encontremos', 'encuentren'],
+    imperative_aff: ['encuentra', 'encuentre', 'encontremos', 'encuentren'],
+  },
+  dormir: {
+    present:        ['duermo', 'duermes', 'duerme', 'dormimos', 'duermen'],
+    preterite:      ['dormí', 'dormiste', 'durmió', 'dormimos', 'durmieron'],
+    present_subj:   ['duerma', 'duermas', 'duerma', 'durmamos', 'duerman'],
+    imperfect_subj: ['durmiera', 'durmieras', 'durmiera', 'durmiéramos', 'durmieran'],
+    imperative_aff: ['duerme', 'duerma', 'durmamos', 'duerman'],
+  },
+  pedir: {
+    present:        ['pido', 'pides', 'pide', 'pedimos', 'piden'],
+    preterite:      ['pedí', 'pediste', 'pidió', 'pedimos', 'pidieron'],
+    present_subj:   ['pida', 'pidas', 'pida', 'pidamos', 'pidan'],
+    imperfect_subj: ['pidiera', 'pidieras', 'pidiera', 'pidiéramos', 'pidieran'],
+    imperative_aff: ['pide', 'pida', 'pidamos', 'pidan'],
+  },
+  sentir: {
+    present:        ['siento', 'sientes', 'siente', 'sentimos', 'sienten'],
+    preterite:      ['sentí', 'sentiste', 'sintió', 'sentimos', 'sintieron'],
+    present_subj:   ['sienta', 'sientas', 'sienta', 'sintamos', 'sientan'],
+    imperfect_subj: ['sintiera', 'sintieras', 'sintiera', 'sintiéramos', 'sintieran'],
+    imperative_aff: ['siente', 'sienta', 'sintamos', 'sientan'],
+  },
+  jugar: {
+    present:        ['juego', 'juegas', 'juega', 'jugamos', 'juegan'],
+    preterite:      ['jugué', 'jugaste', 'jugó', 'jugamos', 'jugaron'],
+    present_subj:   ['juegue', 'juegues', 'juegue', 'juguemos', 'jueguen'],
+    imperative_aff: ['juega', 'juegue', 'juguemos', 'jueguen'],
+  },
+  leer: {
+    preterite:      ['leí', 'leíste', 'leyó', 'leímos', 'leyeron'],
+    imperfect_subj: ['leyera', 'leyeras', 'leyera', 'leyéramos', 'leyeran'],
+    participle: 'leído',
+  },
+  escribir: { participle: 'escrito' },
+  abrir:    { participle: 'abierto' },
+  romper:   { participle: 'roto' },
+  cubrir:   { participle: 'cubierto' },
+  morir: {
+    present:        ['muero', 'mueres', 'muere', 'morimos', 'mueren'],
+    preterite:      ['morí', 'moriste', 'murió', 'morimos', 'murieron'],
+    present_subj:   ['muera', 'mueras', 'muera', 'muramos', 'mueran'],
+    imperfect_subj: ['muriera', 'murieras', 'muriera', 'muriéramos', 'murieran'],
+    participle: 'muerto',
+    imperative_aff: ['muere', 'muera', 'muramos', 'mueran'],
+  },
+  resolver: {
+    present:        ['resuelvo', 'resuelves', 'resuelve', 'resolvemos', 'resuelven'],
+    present_subj:   ['resuelva', 'resuelvas', 'resuelva', 'resolvamos', 'resuelvan'],
+    participle: 'resuelto',
+    imperative_aff: ['resuelve', 'resuelva', 'resolvamos', 'resuelvan'],
+  },
+  oír: {
+    present:        ['oigo', 'oyes', 'oye', 'oímos', 'oyen'],
+    preterite:      ['oí', 'oíste', 'oyó', 'oímos', 'oyeron'],
+    present_subj:   ['oiga', 'oigas', 'oiga', 'oigamos', 'oigan'],
+    imperfect_subj: ['oyera', 'oyeras', 'oyera', 'oyéramos', 'oyeran'],
+    participle: 'oído',
+    imperative_aff: ['oye', 'oiga', 'oigamos', 'oigan'],
+  },
+};
+
+//=================================================================
+// ENGLISH → SPANISH MAP
+//=================================================================
+const ENGLISH_TO_SPANISH = {
+  // Existence / state
+  'be':            ['ser', 'estar'],
+  'have':          ['tener', 'haber'],
+  'exist':         ['existir'],
+  'live':          ['vivir'],
+  'die':           ['morir'],
+  'be born':       ['nacer'],
+  'remain':        ['quedar'],
+  'stay':          ['quedarse'],
+  'happen':        ['suceder'],
+  'occur':         ['ocurrir'],
+  'pass':          ['pasar'],
+  'seem':          ['parecer'],
+  'appear':        ['aparecer'],
+  'disappear':     ['desaparecer'],
+
+  // Action / making
+  'do':            ['hacer'],
+  'make':          ['hacer'],
+  'create':        ['crear'],
+  'build':         ['construir'],
+  'design':        ['diseñar'],
+  'fix':           ['arreglar'],
+  'break':         ['romper'],
+  'destroy':       ['destruir'],
+  'cut':           ['cortar'],
+  'add':           ['añadir', 'agregar'],
+  'remove':        ['quitar'],
+  'cover':         ['cubrir'],
+  'fill':          ['llenar'],
+  'empty':         ['vaciar'],
+  'open':          ['abrir'],
+  'close':         ['cerrar'],
+  'turn on':       ['encender'],
+  'turn off':      ['apagar'],
+  'turn':          ['girar'],
+  'put':           ['poner'],
+  'place':         ['colocar'],
+  'hang':          ['colgar'],
+  'press':         ['apretar'],
+  'use':           ['usar', 'utilizar'],
+  'develop':       ['desarrollar'],
+  'produce':       ['producir'],
+  'maintain':      ['mantener'],
+  'occupy':        ['ocupar'],
+  'form':          ['formar'],
+  'realize':       ['realizar'],
+  'function':      ['funcionar'],
+  'work':          ['trabajar'],
+  'play':          ['jugar', 'tocar'],
+  'prepare':       ['preparar'],
+  'represent':     ['representar'],
+
+  // Movement
+  'go':            ['ir'],
+  'come':          ['venir'],
+  'arrive':        ['llegar'],
+  'leave':         ['salir', 'dejar'],
+  'depart':        ['partir'],
+  'enter':         ['entrar'],
+  'go up':         ['subir'],
+  'go down':       ['bajar'],
+  'climb':         ['escalar'],
+  'descend':       ['descender'],
+  'return':        ['volver', 'regresar'],
+  'walk':          ['caminar', 'andar'],
+  'run':           ['correr'],
+  'jump':          ['saltar'],
+  'fall':          ['caer'],
+  'fall down':     ['caerse'],
+  'fly':           ['volar'],
+  'swim':          ['nadar'],
+  'travel':        ['viajar'],
+  'visit':         ['visitar'],
+  'cross':         ['cruzar'],
+  'move':          ['mover'],
+  'follow':        ['seguir'],
+  'continue':      ['continuar'],
+  'stop':          ['parar', 'detener'],
+  'start':         ['empezar', 'comenzar'],
+  'finish':        ['terminar'],
+  'end':           ['acabar'],
+  'reach':         ['alcanzar'],
+  'flee':          ['huir'],
+  'escape':        ['escapar'],
+  'chase':         ['perseguir'],
+  'drive':         ['conducir', 'manejar'],
+
+  // Communication
+  'say':           ['decir'],
+  'tell':          ['contar'],
+  'speak':         ['hablar'],
+  'talk':          ['conversar'],
+  'ask':           ['preguntar'],
+  'ask for':       ['pedir'],
+  'request':       ['solicitar'],
+  'order':         ['mandar', 'ordenar'],
+  'answer':        ['contestar'],
+  'respond':       ['responder'],
+  'call':          ['llamar'],
+  'mention':       ['mencionar'],
+  'announce':      ['anunciar'],
+  'explain':       ['explicar'],
+  'describe':      ['describir'],
+  'discuss':       ['discutir'],
+  'argue':         ['argumentar'],
+  'shout':         ['gritar'],
+  'whisper':       ['susurrar'],
+  'agree':         ['acordar'],
+  'thank':         ['agradecer'],
+  'apologize':     ['disculparse'],
+  'greet':         ['saludar'],
+  'invite':        ['invitar'],
+  'present':       ['presentar'],
+  'translate':     ['traducir'],
+  'mean':          ['significar'],
+  'be quiet':      ['callar'],
+
+  // Sensory / perception
+  'see':           ['ver'],
+  'look':          ['mirar'],
+  'watch':         ['observar'],
+  'search':        ['buscar'],
+  'find':          ['encontrar', 'hallar'],
+  'find out':      ['averiguar'],
+  'discover':      ['descubrir'],
+  'recognize':     ['reconocer'],
+  'notice':        ['notar'],
+  'show':          ['mostrar', 'enseñar'],
+  'hear':          ['oír'],
+  'listen':        ['escuchar'],
+  'smell':         ['oler'],
+  'taste':         ['saborear'],
+  'touch':         ['tocar'],
+  'feel':          ['sentir'],
+
+  // Mental
+  'think':         ['pensar'],
+  'know':          ['saber', 'conocer'],
+  'meet':          ['conocer'],
+  'understand':    ['entender', 'comprender'],
+  'remember':      ['recordar'],
+  'forget':        ['olvidar'],
+  'believe':       ['creer'],
+  'doubt':         ['dudar'],
+  'decide':        ['decidir'],
+  'choose':        ['elegir'],
+  'select':        ['escoger'],
+  'prefer':        ['preferir'],
+  'imagine':       ['imaginar'],
+  'suppose':       ['suponer'],
+  'consider':      ['considerar'],
+  'guess':         ['adivinar'],
+  'plan':          ['planear'],
+  'study':         ['estudiar'],
+  'learn':         ['aprender'],
+  'teach':         ['enseñar'],
+  'read':          ['leer'],
+  'write':         ['escribir'],
+  'draw':          ['dibujar'],
+  'paint':         ['pintar'],
+  'count':         ['contar'],
+
+  // Modal / will
+  'want':          ['querer', 'desear'],
+  'need':          ['necesitar'],
+  'must':          ['deber'],
+  'be able':       ['poder'],
+  'try':           ['intentar', 'tratar'],
+  'achieve':       ['lograr'],
+  'fulfill':       ['cumplir'],
+  'fail':          ['fallar'],
+  'get':           ['conseguir', 'obtener'],
+  'allow':         ['permitir'],
+  'avoid':         ['evitar'],
+  'propose':       ['proponer'],
+  'insert':        ['introducir'],
+  'determine':     ['determinar'],
+  'depend':        ['depender'],
+  'belong':        ['pertenecer'],
+  'lack':          ['faltar'],
+  'compare':       ['comparar'],
+  'matter':        ['importar'],
+  'interest':      ['interesar'],
+  'accept':        ['aceptar'],
+  'refuse':        ['rechazar'],
+  'forbid':        ['prohibir'],
+
+  // Emotion
+  'love':          ['amar'],
+  'like':          ['gustar'],
+  'hate':          ['odiar'],
+  'enjoy':         ['disfrutar'],
+  'miss':          ['extrañar'],
+  'fear':          ['temer'],
+  'worry':         ['preocupar'],
+  'calm down':     ['calmarse'],
+  'get angry':     ['enojarse'],
+  'get scared':    ['asustarse'],
+  'fall in love':  ['enamorarse'],
+  'kiss':          ['besar'],
+  'hug':           ['abrazar'],
+  'marry':         ['casarse'],
+  'forgive':       ['perdonar'],
+  'bother':        ['molestar'],
+  'scare':         ['asustar'],
+  'suffer':        ['sufrir'],
+  'smile':         ['sonreír'],
+  'laugh':         ['reír'],
+  'cry':           ['llorar'],
+  'dream':         ['soñar'],
+
+  // Daily life
+  'eat':           ['comer'],
+  'drink':         ['beber'],
+  'cook':          ['cocinar'],
+  'have breakfast':['desayunar'],
+  'have lunch':    ['almorzar'],
+  'have dinner':   ['cenar'],
+  'sleep':         ['dormir'],
+  'wake up':       ['despertarse'],
+  'get up':        ['levantarse'],
+  'go to bed':     ['acostarse'],
+  'shower':        ['ducharse'],
+  'bathe':         ['bañarse'],
+  'shave':         ['afeitarse'],
+  'comb hair':     ['peinarse'],
+  'wash':          ['lavar'],
+  'wash oneself':  ['lavarse'],
+  'get dressed':   ['vestirse'],
+  'sit':           ['sentarse'],
+  'rest':          ['descansar'],
+  'breathe':       ['respirar'],
+  'smoke':         ['fumar'],
+  'clean':         ['limpiar'],
+  'sing':          ['cantar'],
+  'dance':         ['bailar'],
+  'have fun':      ['divertirse'],
+  'wait':          ['esperar'],
+
+  // Transfer / commerce
+  'give':          ['dar'],
+  'receive':       ['recibir'],
+  'send':          ['enviar'],
+  'bring':         ['traer'],
+  'carry':         ['llevar'],
+  'take':          ['tomar', 'coger'],
+  'take out':      ['sacar'],
+  'lift':          ['levantar'],
+  'throw':         ['tirar', 'lanzar'],
+  'catch':         ['atrapar'],
+  'push':          ['empujar'],
+  'pull':          ['jalar'],
+  'pick up':       ['recoger'],
+  'hold':          ['sostener'],
+  'grab':          ['agarrar'],
+  'release':       ['soltar'],
+  'buy':           ['comprar'],
+  'sell':          ['vender'],
+  'pay':           ['pagar'],
+  'cost':          ['costar'],
+  'spend':         ['gastar'],
+  'save':          ['ahorrar'],
+  'win':           ['ganar'],
+  'lose':          ['perder'],
+  'rent':          ['alquilar'],
+  'lend':          ['prestar'],
+  'share':         ['compartir'],
+  'exchange':      ['intercambiar'],
+  'give back':     ['devolver'],
+
+  // Help / interaction
+  'help':          ['ayudar'],
+  'support':       ['apoyar'],
+  'serve':         ['servir'],
+  'attend':        ['atender'],
+  'protect':       ['proteger'],
+  'defend':        ['defender'],
+  'attack':        ['atacar'],
+  'kill':          ['matar'],
+  'fight':         ['pelear', 'luchar'],
+  'offer':         ['ofrecer'],
+
+  // Change / measure
+  'change':        ['cambiar'],
+  'transform':     ['transformar'],
+  'grow':          ['crecer'],
+  'age':           ['envejecer'],
+  'improve':       ['mejorar'],
+  'worsen':        ['empeorar'],
+  'increase':      ['aumentar'],
+  'decrease':      ['disminuir'],
+  'reduce':        ['reducir'],
+  'measure':       ['medir'],
+  'weigh':         ['pesar'],
+  'convert':       ['convertir'],
+  'result':        ['resultar'],
+  'direct':        ['dirigir'],
+  'solve':         ['resolver'],
+
+  // Misc
+  'expect':        ['esperar'],
+  'hope':          ['esperar'],
+
+  // === EXPANSION TO ~500 ENGLISH KEYS / ~500 UNIQUE SPANISH VERBS ===
+
+  // Mental / cognitive
+  'analyze':       ['analizar'],
+  'assume':        ['asumir'],
+  'conclude':      ['concluir'],
+  'contemplate':   ['contemplar'],
+  'evaluate':      ['evaluar'],
+  'examine':       ['examinar'],
+  'ignore':        ['ignorar'],
+  'judge':         ['juzgar'],
+  'perceive':      ['percibir'],
+  'predict':       ['predecir'],
+  'regret':        ['arrepentirse'],
+  'focus':         ['enfocar'],
+  'identify':      ['identificar'],
+  'intend':        ['pretender'],
+  'investigate':   ['investigar'],
+  'imply':         ['implicar'],
+  'infer':         ['inferir'],
+  'reason':        ['razonar'],
+  'wonder':        ['preguntarse'],
+  'anticipate':    ['anticipar'],
+  'hesitate':      ['vacilar'],
+  'distract':      ['distraer'],
+  'demonstrate':   ['demostrar'],
+  'suspect':       ['sospechar'],
+  'speculate':     ['especular'],
+  'visualize':     ['visualizar'],
+
+  // Communication (extended)
+  'complain':      ['quejarse'],
+  'confess':       ['confesar'],
+  'confirm':       ['confirmar'],
+  'declare':       ['declarar'],
+  'demand':        ['exigir'],
+  'emphasize':     ['enfatizar'],
+  'mumble':        ['murmurar'],
+  'mutter':        ['mascullar'],
+  'negotiate':     ['negociar'],
+  'object':        ['objetar'],
+  'plead':         ['suplicar'],
+  'pray':          ['rezar'],
+  'preach':        ['predicar'],
+  'promise':       ['prometer'],
+  'pronounce':     ['pronunciar'],
+  'protest':       ['protestar'],
+  'quote':         ['citar'],
+  'recommend':     ['recomendar'],
+  'repeat':        ['repetir'],
+  'report':        ['reportar'],
+  'swear':         ['jurar'],
+  'threaten':      ['amenazar'],
+  'warn':          ['advertir'],
+  'chat':          ['charlar'],
+  'debate':        ['debatir'],
+  'inform':        ['informar'],
+  'deny':          ['negar'],
+  'dictate':       ['dictar'],
+  'narrate':       ['narrar'],
+  'scream':        ['chillar'],
+  'sigh':          ['suspirar'],
+  'scold':         ['regañar'],
+  'suggest':       ['sugerir'],
+  'summon':        ['convocar'],
+
+  // Movement (extended)
+  'bend':          ['doblar'],
+  'bow':           ['inclinarse'],
+  'bounce':        ['rebotar'],
+  'crawl':         ['arrastrarse'],
+  'drift':         ['derivar'],
+  'glide':         ['deslizar'],
+  'hop':           ['brincar'],
+  'hover':         ['flotar'],
+  'kneel':         ['arrodillarse'],
+  'lean':          ['apoyarse'],
+  'march':         ['marchar'],
+  'plunge':        ['zambullirse'],
+  'roam':          ['vagar'],
+  'roll':          ['rodar'],
+  'sneak':         ['escabullirse'],
+  'stagger':       ['tambalearse'],
+  'stroll':        ['pasear'],
+  'stumble':       ['tropezar'],
+  'swing':         ['balancearse'],
+  'vanish':        ['desvanecer'],
+  'ride':          ['montar'],
+  'wave':          ['ondear'],
+  'drag':          ['arrastrar'],
+  'land':          ['aterrizar'],
+  'sink':          ['hundir'],
+  'soar':          ['elevarse'],
+  'tread':         ['pisar'],
+  'flip':          ['voltear'],
+  'squat':         ['agacharse'],
+
+  // Domestic / manipulation
+  'chew':          ['masticar'],
+  'chop':          ['picar'],
+  'dust':          ['desempolvar'],
+  'fold':          ['plegar'],
+  'pack':          ['empacar'],
+  'pause':         ['pausar'],
+  'plug':          ['enchufar'],
+  'polish':        ['pulir'],
+  'pour':          ['verter'],
+  'recover':       ['recuperar'],
+  'refresh':       ['refrescar'],
+  'repair':        ['reparar'],
+  'rinse':         ['enjuagar'],
+  'rip':           ['rasgar'],
+  'rotate':        ['rotar'],
+  'scrub':         ['fregar'],
+  'sew':           ['coser'],
+  'shrink':        ['encoger'],
+  'sip':           ['sorber'],
+  'slice':         ['rebanar'],
+  'slip':          ['resbalar'],
+  'soak':          ['remojar'],
+  'spill':         ['derramar'],
+  'splash':        ['salpicar'],
+  'split':         ['dividir'],
+  'squeeze':       ['exprimir'],
+  'stretch':       ['estirar'],
+  'sweep':         ['barrer'],
+  'tilt':          ['inclinar'],
+  'trim':          ['recortar'],
+  'twist':         ['retorcer'],
+  'unlock':        ['desbloquear'],
+  'unpack':        ['desempacar'],
+  'untie':         ['desatar'],
+  'unwrap':        ['desenvolver'],
+  'vacuum':        ['aspirar'],
+  'whip':          ['batir'],
+  'wind':          ['enrollar'],
+  'wrap':          ['envolver'],
+  'yawn':          ['bostezar'],
+  'knit':          ['tejer'],
+  'mend':          ['remendar'],
+  'dry':           ['secar'],
+  'dig':           ['cavar'],
+  'iron':          ['planchar'],
+  'load':          ['cargar'],
+  'mix':           ['mezclar'],
+  'tie':           ['amarrar'],
+
+  // Body / sensation
+  'blink':         ['parpadear'],
+  'burp':          ['eructar'],
+  'cough':         ['toser'],
+  'drool':         ['babear'],
+  'gasp':          ['jadear'],
+  'hiccup':        ['hipar'],
+  'kick':          ['patear'],
+  'lick':          ['lamer'],
+  'nod':           ['asentir'],
+  'pat':           ['palmear'],
+  'pinch':         ['pellizcar'],
+  'point':         ['señalar'],
+  'punch':         ['golpear'],
+  'scratch':       ['rascar'],
+  'shake':         ['sacudir'],
+  'shiver':        ['tiritar'],
+  'shrug':         ['encogerse'],
+  'slap':          ['abofetear'],
+  'sneeze':        ['estornudar'],
+  'snore':         ['roncar'],
+  'spit':          ['escupir'],
+  'swallow':       ['tragar'],
+  'sweat':         ['sudar'],
+  'tickle':        ['cosquillear'],
+  'vomit':         ['vomitar'],
+  'wink':          ['guiñar'],
+  'tremble':       ['temblar'],
+  'hum':           ['tararear'],
+
+  // Conflict / security
+  'arrest':        ['arrestar'],
+  'beat':          ['vencer'],
+  'betray':        ['traicionar'],
+  'capture':       ['capturar'],
+  'defeat':        ['derrotar'],
+  'invade':        ['invadir'],
+  'murder':        ['asesinar'],
+  'punish':        ['castigar'],
+  'rob':           ['robar'],
+  'spy':           ['espiar'],
+  'steal':         ['hurtar'],
+  'trick':         ['engañar'],
+  'cheat':         ['estafar'],
+  'rescue':        ['rescatar'],
+  'imprison':      ['encarcelar'],
+  'raid':          ['asaltar'],
+  'stab':          ['apuñalar'],
+  'strangle':      ['estrangular'],
+  'torture':       ['torturar'],
+  'execute':       ['ejecutar'],
+
+  // Business / society
+  'acquire':       ['adquirir'],
+  'advertise':     ['publicitar'],
+  'approve':       ['aprobar'],
+  'assign':        ['asignar'],
+  'award':         ['premiar'],
+  'bid':           ['pujar'],
+  'broadcast':     ['difundir'],
+  'budget':        ['presupuestar'],
+  'calculate':     ['calcular'],
+  'cancel':        ['cancelar'],
+  'certify':       ['certificar'],
+  'commit':        ['comprometer'],
+  'compete':       ['competir'],
+  'compose':       ['componer'],
+  'consult':       ['consultar'],
+  'consume':       ['consumir'],
+  'control':       ['controlar'],
+  'cooperate':     ['cooperar'],
+  'coordinate':    ['coordinar'],
+  'copy':          ['copiar'],
+  'correct':       ['corregir'],
+  'delegate':      ['delegar'],
+  'delete':        ['borrar'],
+  'deliver':       ['entregar'],
+  'deposit':       ['depositar'],
+  'distribute':    ['distribuir'],
+  'donate':        ['donar'],
+  'employ':        ['emplear'],
+  'ensure':        ['asegurar'],
+  'enroll':        ['inscribir'],
+  'fire':          ['despedir'],
+  'honor':         ['honrar'],
+  'include':       ['incluir'],
+  'invest':        ['invertir'],
+  'lease':         ['arrendar'],
+  'manufacture':   ['fabricar'],
+  'monitor':       ['supervisar'],
+  'motivate':      ['motivar'],
+  'name':          ['nombrar'],
+  'notify':        ['notificar'],
+  'obey':          ['obedecer'],
+  'operate':       ['operar'],
+  'organize':      ['organizar'],
+  'participate':   ['participar'],
+  'perform':       ['desempeñar'],
+  'post':          ['publicar'],
+  'practice':      ['practicar'],
+  'prevent':       ['prevenir'],
+  'process':       ['procesar'],
+  'promote':       ['promover'],
+  'provide':       ['proveer'],
+  'record':        ['grabar'],
+  'recruit':       ['reclutar'],
+  'refund':        ['reembolsar'],
+  'register':      ['registrar'],
+  'liberate':      ['liberar'],
+  'rely':          ['confiar'],
+  'replace':       ['reemplazar'],
+  'require':       ['requerir'],
+  'reserve':       ['reservar'],
+  'reset':         ['restablecer'],
+  'resign':        ['dimitir'],
+  'retire':        ['retirarse'],
+  'review':        ['revisar'],
+  'risk':          ['arriesgar'],
+  'ruin':          ['arruinar'],
+  'schedule':      ['programar'],
+  'settle':        ['asentar'],
+  'sign':          ['firmar'],
+  'simulate':      ['simular'],
+  'specify':       ['especificar'],
+  'sponsor':       ['patrocinar'],
+  'stimulate':     ['estimular'],
+  'submit':        ['someter'],
+  'substitute':    ['sustituir'],
+  'succeed':       ['triunfar'],
+  'summarize':     ['resumir'],
+  'survey':        ['encuestar'],
+  'survive':       ['sobrevivir'],
+  'test':          ['probar'],
+  'trade':         ['comerciar'],
+  'train':         ['entrenar'],
+  'transfer':      ['transferir'],
+  'transmit':      ['transmitir'],
+  'transport':     ['transportar'],
+  'update':        ['actualizar'],
+  'value':         ['valorar'],
+  'verify':        ['verificar'],
+  'vote':          ['votar'],
+  'waste':         ['desperdiciar'],
+  'withdraw':      ['retirar'],
+  'witness':       ['presenciar'],
+  'establish':     ['establecer'],
+  'enable':        ['habilitar'],
+  'enforce':       ['imponer'],
+
+  // Tech / digital
+  'browse':        ['navegar'],
+  'click':         ['cliquear'],
+  'configure':     ['configurar'],
+  'connect':       ['conectar'],
+  'download':      ['descargar'],
+  'encrypt':       ['encriptar'],
+  'format':        ['formatear'],
+  'hack':          ['hackear'],
+  'link':          ['enlazar'],
+  'paste':         ['pegar'],
+  'print':         ['imprimir'],
+  'restart':       ['reiniciar'],
+  'scan':          ['escanear'],
+  'scroll':        ['desplazarse'],
+  'sync':          ['sincronizar'],
+  'tag':           ['etiquetar'],
+  'type':          ['teclear'],
+
+  // Emotional (extended)
+  'admire':        ['admirar'],
+  'adore':         ['adorar'],
+  'annoy':         ['fastidiar'],
+  'attract':       ['atraer'],
+  'care':          ['cuidar'],
+  'charm':         ['encantar'],
+  'cheer':         ['animar'],
+  'comfort':       ['consolar'],
+  'concern':       ['concernir'],
+  'criticize':     ['criticar'],
+  'dare':          ['atreverse'],
+  'depress':       ['deprimir'],
+  'despise':       ['despreciar'],
+  'detest':        ['detestar'],
+  'disgust':       ['repugnar'],
+  'embarrass':     ['avergonzar'],
+  'encounter':     ['encontrarse'],
+  'excite':        ['emocionar'],
+  'fascinate':     ['fascinar'],
+  'flatter':       ['halagar'],
+  'frustrate':     ['frustrar'],
+  'inspire':       ['inspirar'],
+  'mourn':         ['lamentar'],
+  'offend':        ['ofender'],
+  'please':        ['complacer'],
+  'praise':        ['elogiar'],
+  'provoke':       ['provocar'],
+  'puzzle':        ['desconcertar'],
+  'confuse':       ['confundir'],
+  'reassure':      ['tranquilizar'],
+  'rejoice':       ['regocijarse'],
+  'relax':         ['relajarse'],
+  'resent':        ['resentir'],
+  'respect':       ['respetar'],
+  'seduce':        ['seducir'],
+  'soothe':        ['calmar'],
+  'stir':          ['revolver'],
+  'stun':          ['aturdir'],
+  'surprise':      ['sorprender'],
+  'tease':         ['bromear'],
+  'terrify':       ['aterrorizar'],
+  'tolerate':      ['tolerar'],
+  'yearn':         ['anhelar'],
+  'amaze':         ['asombrar'],
+  'sympathize':    ['simpatizar'],
+  'taunt':         ['mofarse'],
+  'volunteer':     ['ofrecerse'],
+
+  // Other physical / general action
+  'balance':       ['equilibrar'],
+  'base':          ['basar'],
+  'battle':        ['batallar'],
+  'behave':        ['comportarse'],
+  'bet':           ['apostar'],
+  'bind':          ['atar'],
+  'bite':          ['morder'],
+  'blame':         ['culpar'],
+  'bleed':         ['sangrar'],
+  'bless':         ['bendecir'],
+  'block':         ['bloquear'],
+  'blow':          ['soplar'],
+  'boil':          ['hervir'],
+  'bore':          ['aburrir'],
+  'borrow':        ['tomar prestado'],
+  'burn':          ['quemar'],
+  'burst':         ['estallar'],
+  'bury':          ['enterrar'],
+  'cause':         ['causar'],
+  'celebrate':     ['celebrar'],
+  'challenge':     ['desafiar'],
+  'charge':        ['cobrar'],
+  'disappoint':    ['decepcionar'],
+  'discriminate':  ['discriminar'],
+  'distinguish':   ['distinguir'],
+  'disturb':       ['perturbar'],
+  'divorce':       ['divorciar'],
+  'dress':         ['vestir'],
+  'drown':         ['ahogarse'],
+  'educate':       ['educar'],
+  'elevate':       ['elevar'],
+  'emerge':        ['emerger'],
+  'enhance':       ['realzar'],
+  'evolve':        ['evolucionar'],
+  'exaggerate':    ['exagerar'],
+  'exclude':       ['excluir'],
+  'exhaust':       ['agotar'],
+  'expand':        ['expandir'],
+  'experience':    ['experimentar'],
+  'expire':        ['expirar'],
+  'explode':       ['explotar'],
+  'explore':       ['explorar'],
+  'expose':        ['exponer'],
+  'express':       ['expresar'],
+  'extend':        ['extender'],
+  'extract':       ['extraer'],
+  'fade':          ['desvanecerse'],
+  'fasten':        ['sujetar'],
+  'favor':         ['favorecer'],
+  'feed':          ['alimentar'],
+  'film':          ['filmar'],
+  'filter':        ['filtrar'],
+  'finalize':      ['finalizar'],
+  'finance':       ['financiar'],
+  'fish':          ['pescar'],
+  'fit':           ['caber'],
+  'flirt':         ['coquetear'],
+  'flood':         ['inundar'],
+  'flourish':      ['florecer'],
+  'flow':          ['fluir'],
+  'force':         ['forzar'],
+  'foster':        ['fomentar'],
+  'found':         ['fundar'],
+  'freeze':        ['congelar'],
+  'fry':           ['freír'],
+  'gather':        ['reunir'],
+  'generate':      ['generar'],
+  'glance':        ['vislumbrar'],
+  'glow':          ['brillar'],
+  'govern':        ['gobernar'],
+  'grant':         ['conceder'],
+  'grind':         ['moler'],
+  'guarantee':     ['garantizar'],
+  'guide':         ['guiar'],
+  'head':          ['encabezar'],
+  'heal':          ['sanar'],
+  'hint':          ['insinuar'],
+  'humiliate':     ['humillar'],
+  'hunt':          ['cazar'],
+  'hurl':          ['arrojar'],
+  'hurry':         ['apresurarse'],
+  'hurt':          ['herir'],
+  'imitate':       ['imitar'],
+  'immerse':       ['sumergir'],
+  'implement':     ['implementar'],
+  'impress':       ['impresionar'],
+  'incorporate':   ['incorporar'],
+  'indicate':      ['indicar'],
+  'indulge':       ['consentir'],
+  'influence':     ['influir'],
+  'initiate':      ['iniciar'],
+  'inject':        ['inyectar'],
+  'injure':        ['lesionar'],
+  'innovate':      ['innovar'],
+  'inspect':       ['inspeccionar'],
+  'instruct':      ['instruir'],
+  'insult':        ['insultar'],
+  'interact':      ['interactuar'],
+  'intercept':     ['interceptar'],
+  'interfere':     ['interferir'],
+  'interpret':     ['interpretar'],
+  'interrupt':     ['interrumpir'],
+  'interview':     ['entrevistar'],
+  'intimidate':    ['intimidar'],
+  'invent':        ['inventar'],
+  'join':          ['unirse'],
+  'justify':       ['justificar'],
+  'last':          ['durar'],
+  'lead':          ['liderar'],
+  'leak':          ['gotear'],
+  'legalize':      ['legalizar'],
+  'license':       ['autorizar'],
+  'lie':           ['mentir'],
+  'limit':         ['limitar'],
+  'locate':        ['localizar'],
+  'manipulate':    ['manipular'],
+  'mature':        ['madurar'],
+  'merge':         ['fusionar'],
+  'migrate':       ['migrar'],
+  'mock':          ['burlarse'],
+  'modify':        ['modificar'],
+  'multiply':      ['multiplicar'],
+  'neglect':       ['descuidar'],
+  'nourish':       ['nutrir'],
+  'omit':          ['omitir'],
+  'oppose':        ['oponer'],
+  'overcome':      ['superar'],
+  'own':           ['poseer'],
+  'penetrate':     ['penetrar'],
+  'persist':       ['persistir'],
+  'persuade':      ['persuadir'],
+  'plant':         ['plantar'],
+  'pose':          ['posar'],
+  'position':      ['posicionar'],
+  'postpone':      ['posponer'],
+  'prescribe':     ['recetar'],
+  'preserve':      ['preservar'],
+  'pretend':       ['fingir'],
+  'proceed':       ['proceder'],
+  'proclaim':      ['proclamar'],
+  'progress':      ['progresar'],
+  'project':       ['proyectar'],
+  'prosper':       ['prosperar'],
+  'pump':          ['bombear'],
+  'purify':        ['purificar'],
+  'qualify':       ['calificar'],
+  'question':      ['cuestionar'],
+  'quit':          ['renunciar'],
+  'react':         ['reaccionar'],
+  'reap':          ['cosechar'],
+  'rebel':         ['rebelarse'],
+  'reflect':       ['reflejar'],
+  'reform':        ['reformar'],
+  'refute':        ['refutar'],
+  'regain':        ['recobrar'],
+  'regulate':      ['regular'],
+  'relate':        ['relacionar'],
+  'relieve':       ['aliviar'],
+  'reproduce':     ['reproducir'],
+  'resemble':      ['parecerse'],
+  'resist':        ['resistir'],
+  'restore':       ['restaurar'],
+  'restrict':      ['restringir'],
+  'retain':        ['retener'],
+  'retreat':       ['replegarse'],
+  'reverse':       ['revertir'],
+  'revive':        ['revivir'],
+  'reward':        ['recompensar'],
+  'sacrifice':     ['sacrificar'],
+  'satisfy':       ['satisfacer'],
+  'set':           ['fijar'],
+  'situate':       ['situar'],
+  'sort':          ['clasificar'],
+  'specialize':    ['especializarse'],
+  'strain':        ['esforzarse'],
+  'suck':          ['chupar'],
+  'sum':           ['sumar'],
+  'supplement':    ['complementar'],
+  'supply':        ['abastecer'],
+  'surrender':     ['rendirse'],
+  'sustain':       ['sostener'],
+  'tackle':        ['abordar'],
+  'tire':          ['cansar'],
+  'trace':         ['trazar'],
+  'transcend':     ['trascender'],
+  'trigger':       ['desencadenar'],
+  'unite':         ['unir'],
+  'urge':          ['instar'],
+  'vary':          ['variar'],
+  'vibrate':       ['vibrar'],
+  'violate':       ['violar'],
+  'wail':          ['lamentarse'],
+  'warm':          ['calentar'],
+  'water':         ['regar'],
+  'weaken':        ['debilitar'],
+  'wedge':         ['acuñar'],
+  'wield':         ['empuñar'],
+  'wither':        ['marchitarse'],
+  'yield':         ['ceder'],
+
+  // === EXPANSION TO ~1000 ENGLISH KEYS / ~1000 UNIQUE SPANISH VERBS ===
+  'abandon':       ['abandonar'],
+  'abolish':       ['abolir'],
+  'accuse':        ['acusar'],
+  'act':           ['actuar'],
+  'adapt':         ['adaptar'],
+  'adjust':        ['ajustar'],
+  'admit':         ['admitir'],
+  'advance':       ['avanzar'],
+  'advise':        ['aconsejar'],
+  'affect':        ['afectar'],
+  'alert':         ['alertar'],
+  'allege':        ['alegar'],
+  'alter':         ['alterar'],
+  'amend':         ['enmendar'],
+  'amplify':       ['amplificar'],
+  'anchor':        ['anclar'],
+  'annihilate':    ['aniquilar'],
+  'appeal':        ['apelar'],
+  'appease':       ['apaciguar'],
+  'apprehend':     ['aprehender'],
+  'arise':         ['surgir'],
+  'ascend':        ['ascender'],
+  'aspire':        ['aspirar'],
+  'assemble':      ['ensamblar'],
+  'assert':        ['afirmar'],
+  'assist':        ['asistir'],
+  'associate':     ['asociar'],
+  'atone':         ['expiar'],
+  'attach':        ['adjuntar'],
+  'audit':         ['auditar'],
+  'augment':       ['acrecentar'],
+  'automate':      ['automatizar'],
+  'avert':         ['desviar'],
+  'await':         ['aguardar'],
+  'bark':          ['ladrar'],
+  'batter':        ['maltratar'],
+  'beam':          ['resplandecer'],
+  'beg':           ['mendigar'],
+  'bicker':        ['reñir'],
+  'blur':          ['desdibujar'],
+  'boast':         ['alardear'],
+  'bomb':          ['bombardear'],
+  'bond':          ['vincular'],
+  'boost':         ['impulsar'],
+  'brake':         ['frenar'],
+  'breed':         ['criar'],
+  'brew':          ['elaborar'],
+  'broaden':       ['ampliar'],
+  'buckle':        ['abrochar'],
+  'bully':         ['acosar'],
+  'burden':        ['agobiar'],
+  'buzz':          ['zumbar'],
+  'camp':          ['acampar'],
+  'capitalize':    ['capitalizar'],
+  'captivate':     ['cautivar'],
+  'carve':         ['tallar'],
+  'categorize':    ['categorizar'],
+  'cease':         ['cesar'],
+  'censor':        ['censurar'],
+  'chain':         ['encadenar'],
+  'chant':         ['corear'],
+  'chart':         ['graficar'],
+  'chatter':       ['parlotear'],
+  'cherish':       ['atesorar'],
+  'chip':          ['astillar'],
+  'chirp':         ['piar'],
+  'choke':         ['ahogar'],
+  'churn':         ['agitar'],
+  'claim':         ['reclamar'],
+  'clarify':       ['esclarecer'],
+  'clash':         ['chocar'],
+  'classify':      ['catalogar'],
+  'cloak':         ['encapotar'],
+  'clog':          ['atascar'],
+  'cluster':       ['agrupar'],
+  'clutch':        ['aferrar'],
+  'coast':         ['costear'],
+  'coat':          ['recubrir'],
+  'coil':          ['enroscar'],
+  'coincide':      ['coincidir'],
+  'collaborate':   ['colaborar'],
+  'collapse':      ['derrumbar'],
+  'collide':       ['colisionar'],
+  'comb':          ['peinar'],
+  'combine':       ['combinar'],
+  'comment':       ['comentar'],
+  'communicate':   ['comunicar'],
+  'compel':        ['obligar'],
+  'compensate':    ['compensar'],
+  'compile':       ['compilar'],
+  'complete':      ['completar'],
+  'complicate':    ['complicar'],
+  'comply':        ['acatar'],
+  'compress':      ['comprimir'],
+  'comprise':      ['abarcar'],
+  'concentrate':   ['concentrar'],
+  'condemn':       ['condenar'],
+  'condense':      ['condensar'],
+  'confer':        ['conferir'],
+  'confine':       ['confinar'],
+  'conform':       ['conformar'],
+  'congeal':       ['cuajar'],
+  'congratulate':  ['felicitar'],
+  'conjure':       ['conjurar'],
+  'conquer':       ['conquistar'],
+  'consent':       ['acceder'],
+  'conserve':      ['conservar'],
+  'consist':       ['consistir'],
+  'consolidate':   ['consolidar'],
+  'conspire':      ['conspirar'],
+  'constitute':    ['constituir'],
+  'contain':       ['contener'],
+  'contaminate':   ['contaminar'],
+  'contend':       ['contender'],
+  'contest':       ['impugnar'],
+  'contort':       ['deformar'],
+  'contradict':    ['contradecir'],
+  'contrast':      ['contrastar'],
+  'contribute':    ['contribuir'],
+  'converge':      ['converger'],
+  'converse':      ['dialogar'],
+  'convict':       ['inculpar'],
+  'convince':      ['convencer'],
+  'cope':          ['sobrellevar'],
+  'correlate':     ['correlacionar'],
+  'correspond':    ['corresponder'],
+  'corrupt':       ['corromper'],
+  'court':         ['cortejar'],
+  'cower':         ['acobardarse'],
+  'crack':         ['agrietar'],
+  'craft':         ['confeccionar'],
+  'crash':         ['estrellarse'],
+  'crave':         ['ansiar'],
+  'crease':        ['arrugar'],
+  'creep':         ['deslizarse'],
+  'crowd':         ['amontonar'],
+  'crumble':       ['desmoronar'],
+  'crush':         ['aplastar'],
+  'cuddle':        ['acurrucar'],
+  'culminate':     ['culminar'],
+  'cultivate':     ['cultivar'],
+  'curb':          ['refrenar'],
+  'cure':          ['curar'],
+  'curl':          ['rizar'],
+  'curse':         ['maldecir'],
+  'curtail':       ['acortar'],
+  'damage':        ['dañar'],
+  'dawn':          ['amanecer'],
+  'deceive':       ['defraudar'],
+  'decipher':      ['descifrar'],
+  'decode':        ['decodificar'],
+  'decompose':     ['descomponer'],
+  'decorate':      ['decorar'],
+  'dedicate':      ['dedicar'],
+  'deduct':        ['deducir'],
+  'deepen':        ['ahondar'],
+  'defer':         ['diferir'],
+  'define':        ['definir'],
+  'deflate':       ['desinflar'],
+  'delay':         ['retrasar'],
+  'demolish':      ['demoler'],
+  'depict':        ['retratar'],
+  'deport':        ['deportar'],
+  'deprive':       ['privar'],
+  'derive':        ['provenir'],
+  'designate':     ['designar'],
+  'deteriorate':   ['deteriorar'],
+  'devastate':     ['devastar'],
+  'devote':        ['consagrar'],
+  'devour':        ['devorar'],
+  'digest':        ['digerir'],
+  'dilute':        ['diluir'],
+  'diminish':      ['mermar'],
+  'disable':       ['discapacitar'],
+  'disagree':      ['disentir'],
+  'disapprove':    ['desaprobar'],
+  'discard':       ['descartar'],
+  'disgrace':      ['deshonrar'],
+  'dislike':       ['disgustar'],
+  'dispatch':      ['despachar'],
+  'dispel':        ['disipar'],
+  'dispense':      ['dispensar'],
+  'displace':      ['desplazar'],
+  'disrupt':       ['trastornar'],
+  'dissolve':      ['disolver'],
+  'distort':       ['distorsionar'],
+  'diverge':       ['divergir'],
+  'document':      ['documentar'],
+  'doodle':        ['garabatear'],
+  'douse':         ['empapar'],
+  'drain':         ['drenar'],
+  'drench':        ['mojar'],
+  'echo':          ['resonar'],
+  'edit':          ['editar'],
+  'elaborate':     ['detallar'],
+  'eliminate':     ['eliminar'],
+  'embark':        ['embarcar'],
+  'embed':         ['incrustar'],
+  'embellish':     ['embellecer'],
+  'embody':        ['encarnar'],
+  'emit':          ['emitir'],
+  'empower':       ['empoderar'],
+  'enclose':       ['encerrar'],
+  'encompass':     ['englobar'],
+  'endorse':       ['avalar'],
+  'endow':         ['dotar'],
+  'endure':        ['soportar'],
+  'engage':        ['enganchar'],
+  'engineer':      ['ingeniar'],
+  'enlighten':     ['iluminar'],
+  'enlist':        ['alistar'],
+  'enrich':        ['enriquecer'],
+  'enslave':       ['esclavizar'],
+  'entail':        ['conllevar'],
+  'entice':        ['tentar'],
+  'envelop':       ['arropar'],
+  'envy':          ['envidiar'],
+  'equal':         ['igualar'],
+  'equip':         ['equipar'],
+  'erupt':         ['erupcionar'],
+  'escalate':      ['agravar'],
+  'evade':         ['evadir'],
+  'exceed':        ['exceder'],
+  'exclaim':       ['exclamar'],
+  'excuse':        ['excusar'],
+  'exempt':        ['eximir'],
+  'exhale':        ['exhalar'],
+  'exile':         ['exiliar'],
+  'expel':         ['expulsar'],
+  'experiment':    ['ensayar'],
+  'extinguish':    ['extinguir'],
+  'extort':        ['extorsionar'],
+  'fabricate':     ['urdir'],
+  'falter':        ['titubear'],
+  'fast':          ['ayunar'],
+  'fence':         ['cercar'],
+  'ferment':       ['fermentar'],
+  'flatten':       ['aplanar'],
+  'flick':         ['chasquear'],
+  'fluctuate':     ['fluctuar'],
+  'flush':         ['ruborizarse'],
+  'foretell':      ['vaticinar'],
+  'forge':         ['forjar'],
+  'fracture':      ['fracturar'],
+  'fragment':      ['fragmentar'],
+  'frame':         ['enmarcar'],
+  'fuel':          ['avivar'],
+  'gauge':         ['calibrar'],
+  'glare':         ['fulminar'],
+  'gleam':         ['relucir'],
+  'glimpse':       ['avistar'],
+  'graze':         ['pastar'],
+  'haggle':        ['regatear'],
+  'haunt':         ['hechizar'],
+  'hijack':        ['secuestrar'],
+  'hinder':        ['obstaculizar'],
+  'hoard':         ['acaparar'],
+  'idolize':       ['idolatrar'],
+  'immobilize':    ['inmovilizar'],
+  'impart':        ['impartir'],
+  'impede':        ['impedir'],
+  'incite':        ['incitar'],
+  'incline':       ['tender'],
+  'incur':         ['incurrir'],
+  'induce':        ['inducir'],
+  'infect':        ['infectar'],
+  'inflict':       ['infligir'],
+  'ingest':        ['ingerir'],
+  'inhabit':       ['habitar'],
+  'inhale':        ['inhalar'],
+  'inherit':       ['heredar'],
+  'initialize':    ['inicializar'],
+  'insist':        ['insistir'],
+  'integrate':     ['integrar'],
+  'intensify':     ['intensificar'],
+  'interrogate':   ['interrogar'],
+  'intertwine':    ['entrelazar'],
+  'invoke':        ['invocar'],
+  'irrigate':      ['irrigar'],
+  'isolate':       ['aislar'],
+  'jingle':        ['tintinear'],
+  'kindle':        ['prender'],
+  'lengthen':      ['alargar'],
+  'lessen':        ['menguar'],
+  'liaise':        ['contactar'],
+  'limp':          ['cojear'],
+  'linger':        ['demorarse'],
+  'liquidate':     ['liquidar'],
+  'litter':        ['ensuciar'],
+  'lobby':         ['cabildear'],
+  'loosen':        ['aflojar'],
+  'lubricate':     ['lubricar'],
+  'lurk':          ['acechar'],
+  'magnify':       ['magnificar'],
+  'maneuver':      ['maniobrar'],
+  'mar':           ['estropear'],
+  'mask':          ['enmascarar'],
+  'massacre':      ['masacrar'],
+  'master':        ['dominar'],
+  'mediate':       ['mediar'],
+  'meditate':      ['meditar'],
+  'memorize':      ['memorizar'],
+  'mesh':          ['engranar'],
+  'mimic':         ['remedar'],
+  'mingle':        ['alternar'],
+  'minimize':      ['minimizar'],
+  'mislead':       ['extraviar'],
+  'misplace':      ['traspapelar'],
+  'modernize':     ['modernizar'],
+  'moisturize':    ['hidratar'],
+  'mold':          ['moldear'],
+  'mute':          ['silenciar'],
+  'mutilate':      ['mutilar'],
+  'nest':          ['anidar'],
+  'normalize':     ['normalizar'],
+  'numb':          ['adormecer'],
+  'obscure':       ['oscurecer'],
+  'obsess':        ['obsesionar'],
+  'obstruct':      ['obstruir'],
+  'oppress':       ['oprimir'],
+  'optimize':      ['optimizar'],
+  'overshadow':    ['eclipsar'],
+  'overtake':      ['adelantar'],
+  'overthrow':     ['derrocar'],
+  'overwhelm':     ['abrumar'],
+  'pacify':        ['pacificar'],
+  'paddle':        ['remar'],
+  'pardon':        ['indultar'],
+  'partition':     ['particionar'],
+  'patrol':        ['patrullar'],
+  'penalize':      ['penalizar'],
+  'pervade':       ['impregnar'],
+  'photograph':    ['fotografiar'],
+  'pilot':         ['pilotar'],
+  'plot':          ['tramar'],
+  'pluck':         ['arrancar'],
+  'plummet':       ['desplomarse'],
+  'polarize':      ['polarizar'],
+  'populate':      ['poblar'],
+  'precede':       ['preceder'],
+  'preclude':      ['imposibilitar'],
+  'predominate':   ['predominar'],
+  'preside':       ['presidir'],
+  'prevail':       ['prevalecer'],
+  'profile':       ['perfilar'],
+  'prolong':       ['prolongar'],
+  'propagate':     ['propagar'],
+  'prosecute':     ['enjuiciar'],
+  'protrude':      ['sobresalir'],
+  'punctuate':     ['puntuar'],
+  'purge':         ['purgar'],
+  'pursue':        ['proseguir'],
+  'quench':        ['saciar'],
+  'rally':         ['reagrupar'],
+  'ramble':        ['divagar'],
+  'rate':          ['tasar'],
+  'ratify':        ['ratificar'],
+  'rationalize':   ['racionalizar'],
+  'ravage':        ['asolar'],
+  'rebound':       ['repercutir'],
+  'rebuke':        ['reprender'],
+  'recede':        ['retroceder'],
+  'reclaim':       ['reivindicar'],
+  'recline':       ['reclinarse'],
+  'reconcile':     ['reconciliar'],
+  'recreate':      ['recrear'],
+  'rectify':       ['rectificar'],
+  'recur':         ['recurrir'],
+  'recycle':       ['reciclar'],
+  'redeem':        ['redimir'],
+  'redirect':      ['redirigir'],
+  'redo':          ['rehacer'],
+  'refer':         ['referir'],
+  'refine':        ['refinar'],
+  'refuel':        ['repostar'],
+  'reign':         ['reinar'],
+  'reinforce':     ['reforzar'],
+  'reinstate':     ['restituir'],
+  'reiterate':     ['reiterar'],
+  'rejuvenate':    ['rejuvenecer'],
+  'reload':        ['recargar'],
+  'remit':         ['remitir'],
+  'remodel':       ['remodelar'],
+  'render':        ['renderizar'],
+  'reorganize':    ['reorganizar'],
+  'repel':         ['repeler'],
+  'rephrase':      ['parafrasear'],
+  'replicate':     ['replicar'],
+  'repress':       ['reprimir'],
+  'reproach':      ['reprochar'],
+  'reside':        ['residir'],
+  'restructure':   ['reestructurar'],
+  'resume':        ['reanudar'],
+  'resurrect':     ['resucitar'],
+  'rid':           ['deshacerse'],
+  'roar':          ['rugir'],
+  'sabotage':      ['sabotear'],
+  'safeguard':     ['salvaguardar'],
+  'salvage':       ['salvar'],
+  'sanction':      ['sancionar'],
+  'savor':         ['gozar'],
+  'scrap':         ['desechar'],
+  'scrape':        ['raspar'],
+  'sculpt':        ['esculpir'],
+  'segregate':     ['segregar'],
+  'seize':         ['apoderarse'],
+  'sentence':      ['sentenciar'],
+  'sequester':     ['apartar'],
+  'shadow':        ['ensombrecer'],
+  'sharpen':       ['afilar'],
+  'shelter':       ['refugiar'],
+  'shift':         ['trasladar'],
+  'shorten':       ['abreviar'],
+  'showcase':      ['lucir'],
+  'shudder':       ['estremecerse'],
+  'sicken':        ['enfermar'],
+  'simplify':      ['simplificar'],
+  'singe':         ['chamuscar'],
+  'skim':          ['ojear'],
+  'skip':          ['saltarse'],
+  'slander':       ['difamar'],
+  'slow':          ['ralentizar'],
+  'smear':         ['untar'],
+  'smother':       ['sofocar'],
+  'snarl':         ['gruñir'],
+  'snatch':        ['arrebatar'],
+  'sniff':         ['olfatear'],
+  'snub':          ['desairar'],
+  'snuggle':       ['acurrucarse'],
+  'sob':           ['sollozar'],
+  'spare':         ['librar'],
+  'spawn':         ['engendrar'],
+  'splatter':      ['rociar'],
+  'sprawl':        ['extenderse'],
+  'sprinkle':      ['espolvorear'],
+  'sprout':        ['brotar'],
+  'spurn':         ['desdeñar'],
+  'square':        ['cuadrar'],
+  'squeak':        ['rechinar'],
+  'squint':        ['entornar'],
+  'stack':         ['apilar'],
+  'staple':        ['grapar'],
+  'sterilize':     ['esterilizar'],
+  'stigmatize':    ['estigmatizar'],
+  'sting':         ['aguijonear'],
+  'stipulate':     ['estipular'],
+  'stomp':         ['pisotear'],
+  'streak':        ['rayar'],
+  'strengthen':    ['fortalecer'],
+  'stress':        ['estresar'],
+  'strive':        ['bregar'],
+  'stunt':         ['atrofiar'],
+  'stuff':         ['rellenar'],
+  'subordinate':   ['subordinar'],
+  'subscribe':     ['suscribir'],
+  'subside':       ['amainar'],
+  'subsidize':     ['subsidiar'],
+  'sue':           ['demandar'],
+  'suffocate':     ['asfixiar'],
+  'suit':          ['adecuar'],
+  'sully':         ['mancillar'],
+  'superimpose':   ['superponer'],
+  'supplant':      ['suplantar'],
+  'surge':         ['incrementar'],
+  'surmise':       ['conjeturar'],
+  'surpass':       ['aventajar'],
+  'suspend':       ['suspender'],
+  'sway':          ['mecer'],
+  'sweeten':       ['endulzar'],
+  'swerve':        ['virar'],
+  'swirl':         ['arremolinarse'],
+  'tally':         ['contabilizar'],
+  'tame':          ['domar'],
+  'tarnish':       ['empañar'],
+  'thaw':          ['descongelar'],
+  'thicken':       ['espesar'],
+  'thrash':        ['azotar'],
+  'tinker':        ['trastear'],
+  'tip':           ['volcar'],
+  'toast':         ['brindar'],
+  'topple':        ['derribar'],
+  'tow':           ['remolcar'],
+  'transcribe':    ['transcribir'],
+  'trespass':      ['transgredir'],
+  'trickle':       ['chorrear'],
+  'triple':        ['triplicar'],
+  'twitch':        ['crispar'],
+  'unbalance':     ['desequilibrar'],
+  'unbutton':      ['desabrochar'],
+  'uncover':       ['destapar'],
+  'undergo':       ['someterse'],
+  'underline':     ['subrayar'],
+  'undermine':     ['socavar'],
+  'underscore':    ['recalcar'],
+  'undertake':     ['emprender'],
+  'unearth':       ['desenterrar'],
+  'unfold':        ['desplegar'],
+  'unify':         ['unificar'],
+  'unload':        ['desembarcar'],
+  'unplug':        ['desenchufar'],
+  'unravel':       ['desenmarañar'],
+  'unscrew':       ['desatornillar'],
+  'unveil':        ['develar'],
+  'urinate':       ['orinar'],
+  'usher':         ['acomodar'],
+  'vacate':        ['desocupar'],
+  'validate':      ['validar'],
+  'venerate':      ['venerar'],
+  'vent':          ['ventilar'],
+  'venture':       ['aventurar'],
+  'vie':           ['rivalizar'],
+  'vindicate':     ['vindicar'],
+  'waddle':        ['anadear'],
+  'wallow':        ['revolcarse'],
+  'warble':        ['gorjear'],
+  'weave':         ['entretejer'],
+  'weld':          ['soldar'],
+  'wet':           ['humedecer'],
+  'whack':         ['aporrear'],
+  'wheeze':        ['silbar'],
+  'whimper':       ['gimotear'],
+  'whittle':       ['mondar'],
+  'whoop':         ['vitorear'],
+  'wile':          ['engatusar'],
+  'wreck':         ['destrozar'],
+  'wrench':        ['torcer'],
+};
+
+//=================================================================
+// ENGLISH IRREGULAR VERBS — base|pres|past|pp|ing
+//=================================================================
+const EN_IRREG_COMPACT = `
+be|am|was|been|being
+have|have|had|had|having
+do|do|did|done|doing
+go|go|went|gone|going
+make|make|made|made|making
+say|say|said|said|saying
+tell|tell|told|told|telling
+see|see|saw|seen|seeing
+know|know|knew|known|knowing
+take|take|took|taken|taking
+get|get|got|gotten|getting
+come|come|came|come|coming
+give|give|gave|given|giving
+find|find|found|found|finding
+think|think|thought|thought|thinking
+write|write|wrote|written|writing
+read|read|read|read|reading
+speak|speak|spoke|spoken|speaking
+eat|eat|ate|eaten|eating
+drink|drink|drank|drunk|drinking
+sleep|sleep|slept|slept|sleeping
+feel|feel|felt|felt|feeling
+sell|sell|sold|sold|selling
+leave|leave|left|left|leaving
+buy|buy|bought|bought|buying
+bring|bring|brought|brought|bringing
+break|break|broke|broken|breaking
+choose|choose|chose|chosen|choosing
+forget|forget|forgot|forgotten|forgetting
+hear|hear|heard|heard|hearing
+meet|meet|met|met|meeting
+lose|lose|lost|lost|losing
+win|win|won|won|winning
+run|run|ran|run|running
+send|send|sent|sent|sending
+pay|pay|paid|paid|paying
+put|put|put|put|putting
+sing|sing|sang|sung|singing
+sit|sit|sat|sat|sitting
+stand|stand|stood|stood|standing
+fall|fall|fell|fallen|falling
+fly|fly|flew|flown|flying
+hide|hide|hid|hidden|hiding
+keep|keep|kept|kept|keeping
+catch|catch|caught|caught|catching
+mean|mean|meant|meant|meaning
+spend|spend|spent|spent|spending
+hold|hold|held|held|holding
+build|build|built|built|building
+cut|cut|cut|cut|cutting
+let|let|let|let|letting
+draw|draw|drew|drawn|drawing
+throw|throw|threw|thrown|throwing
+drive|drive|drove|driven|driving
+become|become|became|become|becoming
+begin|begin|began|begun|beginning
+teach|teach|taught|taught|teaching
+wear|wear|wore|worn|wearing
+understand|understand|understood|understood|understanding
+shake|shake|shook|shaken|shaking
+hit|hit|hit|hit|hitting
+lay|lay|laid|laid|laying
+lead|lead|led|led|leading
+ring|ring|rang|rung|ringing
+rise|rise|rose|risen|rising
+seek|seek|sought|sought|seeking
+show|show|showed|shown|showing
+spread|spread|spread|spread|spreading
+steal|steal|stole|stolen|stealing
+swim|swim|swam|swum|swimming
+wake|wake|woke|woken|waking
+fight|fight|fought|fought|fighting
+forgive|forgive|forgave|forgiven|forgiving
+ride|ride|rode|ridden|riding
+freeze|freeze|froze|frozen|freezing
+grow|grow|grew|grown|growing
+hurt|hurt|hurt|hurt|hurting
+`.trim();
+
+const EN_IRREG = {};
+EN_IRREG_COMPACT.split('\n').forEach(line => {
+  const [base, pres, past, pp, ing] = line.split('|');
+  EN_IRREG[base] = { base, pres, past, pp, ing };
+});
+
+function regularEnPast(base) {
+  if (base.endsWith('e')) return base + 'd';
+  if (/[bcdfghjklmnpqrstvwxz]y$/.test(base)) return base.slice(0, -1) + 'ied';
+  if (/^[bcdfghjklmnpqrstvwxz][aeiou][bcdfgklmnprt]$/.test(base)) return base + base.slice(-1) + 'ed';
+  return base + 'ed';
+}
+function regularEnIng(base) {
+  if (base.endsWith('ie')) return base.slice(0, -2) + 'ying';
+  if (base.endsWith('e') && base.length > 2 && !base.endsWith('ee')) return base.slice(0, -1) + 'ing';
+  if (/^[bcdfghjklmnpqrstvwxz][aeiou][bcdfgklmnprt]$/.test(base)) return base + base.slice(-1) + 'ing';
+  return base + 'ing';
+}
+function getEnForms(base) {
+  if (!base) return null;
+  if (EN_IRREG[base]) return EN_IRREG[base];
+  // Multi-word ("look for", "ask for", "go up") — only conjugate the verb part
+  if (base.includes(' ')) {
+    const parts = base.split(' ');
+    const head = parts[0];
+    const tail = parts.slice(1).join(' ');
+    const headF = getEnForms(head);
+    return {
+      base, pres: head + ' ' + tail,
+      past: headF.past + ' ' + tail,
+      pp:   headF.pp   + ' ' + tail,
+      ing:  headF.ing  + ' ' + tail,
+    };
+  }
+  const past = regularEnPast(base);
+  return { base, pres: base, past, pp: past, ing: regularEnIng(base) };
+}
+
+//=================================================================
+// EXAMPLE TEMPLATES — dynamic per searched verb
+//=================================================================
+const EXAMPLE_TPL = {
+  present:               (f) => `I ${f.pres}`,
+  preterite:             (f) => `I ${f.past}`,
+  imperfect:             (f) => `I was ${f.ing}`,
+  future:                (f) => `I will ${f.base}`,
+  conditional:           (f) => `I would ${f.base}`,
+  present_perfect:       (f) => `I have ${f.pp}`,
+  pluperfect:            (f) => `I had ${f.pp}`,
+  future_perfect:        (f) => `I will have ${f.pp}`,
+  conditional_perfect:   (f) => `I would have ${f.pp}`,
+  present_subj:          (f) => `(that) I ${f.base}`,
+  imperfect_subj:        (f) => `(that) I ${f.past}`,
+  present_perfect_subj:  (f) => `(that) I have ${f.pp}`,
+  pluperfect_subj:       (f) => `(that) I had ${f.pp}`,
+  imperative_aff:        (f) => `${f.base}!`,
+  imperative_neg:        (f) => `don't ${f.base}!`,
+};
+function buildExample(tenseKey, enBase) {
+  const forms = getEnForms(enBase) || getEnForms('be');
+  const tpl = EXAMPLE_TPL[tenseKey];
+  return tpl ? tpl(forms) : '';
+}
+
+// Per-row English conjugation. Each tile row shows the Spanish form on top
+// and an English equivalent inflected for the active pronoun + tense below.
+const EN_SUBJ      = ['I', 'you', 'he/she', 'we', 'they'];
+const EN_BE_PRES   = ['am', 'are', 'is', 'are', 'are'];
+const EN_BE_PAST   = ['was', 'were', 'was', 'were', 'were'];
+const EN_HAVE_PRES = ['have', 'have', 'has', 'have', 'have'];
+
+function present3rd(forms) {
+  if (forms.pres === 'am')   return 'is';
+  if (forms.pres === 'have') return 'has';
+  if (forms.pres === 'do')   return 'does';
+  if (forms.pres === 'go')   return 'goes';
+  const b = forms.pres;
+  if (/[bcdfghjklmnpqrstvwxz]y$/.test(b)) return b.slice(0, -1) + 'ies';
+  if (/(s|x|z|ch|sh|o)$/.test(b))         return b + 'es';
+  return b + 's';
+}
+function presentEnForm(f, i) {
+  if (f.pres === 'am') return EN_BE_PRES[i];
+  if (i === 2)         return present3rd(f);
+  return f.pres;
+}
+
+const EN_ROW_TPL = {
+  present:              (f, i) => `${EN_SUBJ[i]} ${presentEnForm(f, i)}`,
+  preterite:            (f, i) => f.past === 'was' ? `${EN_SUBJ[i]} ${EN_BE_PAST[i]}` : `${EN_SUBJ[i]} ${f.past}`,
+  imperfect:            (f, i) => f.pres === 'am'  ? `${EN_SUBJ[i]} ${EN_BE_PAST[i]}` : `${EN_SUBJ[i]} ${EN_BE_PAST[i]} ${f.ing}`,
+  future:               (f, i) => `${EN_SUBJ[i]} will ${f.base}`,
+  conditional:          (f, i) => `${EN_SUBJ[i]} would ${f.base}`,
+  present_perfect:      (f, i) => `${EN_SUBJ[i]} ${EN_HAVE_PRES[i]} ${f.pp}`,
+  pluperfect:           (f, i) => `${EN_SUBJ[i]} had ${f.pp}`,
+  future_perfect:       (f, i) => `${EN_SUBJ[i]} will have ${f.pp}`,
+  conditional_perfect:  (f, i) => `${EN_SUBJ[i]} would have ${f.pp}`,
+  present_subj:         (f, i) => `(that) ${EN_SUBJ[i]} ${f.base}`,
+  imperfect_subj:       (f, i) => f.past === 'was' ? `(that) ${EN_SUBJ[i]} were` : `(that) ${EN_SUBJ[i]} ${f.past}`,
+  present_perfect_subj: (f, i) => `(that) ${EN_SUBJ[i]} ${EN_HAVE_PRES[i]} ${f.pp}`,
+  pluperfect_subj:      (f, i) => `(that) ${EN_SUBJ[i]} had ${f.pp}`,
+  // Imperative tiles use 4 pronouns: tú, Ud., nosotros, Uds.
+  imperative_aff:       (f, i) => [`${f.base}!`, `${f.base}! (formal)`, `let's ${f.base}!`, `${f.base}! (you all)`][i] || '',
+  imperative_neg:       (f, i) => [`don't ${f.base}!`, `don't ${f.base}! (formal)`, `let's not ${f.base}!`, `don't ${f.base}! (you all)`][i] || '',
+};
+function buildRowEnglish(tenseKey, pronounIdx, enBase) {
+  const forms = getEnForms(enBase) || getEnForms('be');
+  const tpl = EN_ROW_TPL[tenseKey];
+  return tpl ? tpl(forms, pronounIdx) : '';
+}
+
+//=================================================================
+// ENGLISH PAIR PARSER — "I spoke" / "they will eat" / "she has spoken"
+// → resolves the English pronoun + conjugated verb pair to:
+//   { pronounIdx, tense, baseVerb }
+// Used to filter the tile output to the single matching Spanish row.
+//=================================================================
+const EN_PRONOUN_IDX = {
+  'i': 0, 'you': 1, 'he': 2, 'she': 2, 'it': 2, 'we': 3, 'they': 4,
+};
+function findBaseInDict(word) {
+  return ENGLISH_TO_SPANISH[word] ? word : null;
+}
+function findBaseFromBase(word) {
+  if (word === 'be' || word === 'am' || word === 'are') return 'be';
+  return findBaseInDict(word);
+}
+function findBaseFrom3rd(word) {
+  if (word === 'is')   return 'be';
+  if (word === 'has')  return 'have';
+  if (word === 'does') return 'do';
+  if (word === 'goes') return 'go';
+  // Search EN_IRREG for a verb whose computed 3rd-singular matches
+  // (most won't have one stored; fall through to regular rules)
+  if (word.endsWith('ies')) {
+    const base = word.slice(0, -3) + 'y';
+    if (findBaseInDict(base)) return base;
+  }
+  if (word.endsWith('es')) {
+    const base = word.slice(0, -2);
+    if (findBaseInDict(base)) return base;
+  }
+  if (word.endsWith('s')) {
+    const base = word.slice(0, -1);
+    if (findBaseInDict(base)) return base;
+  }
+  return null;
+}
+function findBaseByIrregField(word, field) {
+  for (const base in EN_IRREG) {
+    if (EN_IRREG[base][field] === word && findBaseInDict(base)) return base;
+  }
+  return null;
+}
+function findBaseFromPast(word) {
+  if (word === 'was' || word === 'were') return 'be';
+  const irreg = findBaseByIrregField(word, 'past');
+  if (irreg) return irreg;
+  // Regular -ed: try several reductions
+  if (word.endsWith('ed')) {
+    const stem = word.slice(0, -2);
+    if (findBaseInDict(stem)) return stem;                              // worked → work
+    if (findBaseInDict(stem + 'e')) return stem + 'e';                  // loved → love
+    // Doubled-consonant: stopped → stop
+    if (stem.length > 1 && stem.slice(-1) === stem.slice(-2, -1)) {
+      const undoubled = stem.slice(0, -1);
+      if (findBaseInDict(undoubled)) return undoubled;
+    }
+    // -ied → y: tried → try
+    if (stem.endsWith('i')) {
+      const yForm = stem.slice(0, -1) + 'y';
+      if (findBaseInDict(yForm)) return yForm;
+    }
+  }
+  return null;
+}
+function findBaseFromIng(word) {
+  const irreg = findBaseByIrregField(word, 'ing');
+  if (irreg) return irreg;
+  if (!word.endsWith('ing')) return null;
+  const stem = word.slice(0, -3);
+  if (findBaseInDict(stem)) return stem;                                // working → work
+  if (findBaseInDict(stem + 'e')) return stem + 'e';                    // loving → love
+  if (stem.length > 1 && stem.slice(-1) === stem.slice(-2, -1)) {
+    const undoubled = stem.slice(0, -1);
+    if (findBaseInDict(undoubled)) return undoubled;                    // stopping → stop
+  }
+  if (stem.endsWith('y')) {
+    const ieForm = stem.slice(0, -1) + 'ie';
+    if (findBaseInDict(ieForm)) return ieForm;                          // lying → lie
+  }
+  return null;
+}
+function findBaseFromPP(word) {
+  const irreg = findBaseByIrregField(word, 'pp');
+  if (irreg) return irreg;
+  // Regular past participle = past
+  return findBaseFromPast(word);
+}
+
+// Parse a bare English conjugated verb (no pronoun) and return
+// { tense, baseVerb }. Bare base forms like "speak" are skipped here so
+// the standard dictionary path can handle them as full conjugations.
+function parseEnglishConjugation(input) {
+  const tokens = (input || '').trim().toLowerCase().split(/\s+/);
+  if (tokens.length < 1 || !tokens[0]) return null;
+  // If it starts with a pronoun, leave it for parseEnglishPair.
+  if (EN_PRONOUN_IDX[tokens[0]] !== undefined) return null;
+
+  let tense = null, baseVerb = null;
+
+  if (tokens[0] === 'will' && tokens[1] === 'have' && tokens.length === 3) {
+    tense = 'future_perfect';      baseVerb = findBaseFromPP(tokens[2]);
+  } else if (tokens[0] === 'would' && tokens[1] === 'have' && tokens.length === 3) {
+    tense = 'conditional_perfect'; baseVerb = findBaseFromPP(tokens[2]);
+  } else if (tokens[0] === 'will' && tokens.length === 2) {
+    tense = 'future';              baseVerb = findBaseFromBase(tokens[1]);
+  } else if (tokens[0] === 'would' && tokens.length === 2) {
+    tense = 'conditional';         baseVerb = findBaseFromBase(tokens[1]);
+  } else if ((tokens[0] === 'have' || tokens[0] === 'has') && tokens.length === 2) {
+    tense = 'present_perfect';     baseVerb = findBaseFromPP(tokens[1]);
+  } else if (tokens[0] === 'had' && tokens.length === 2) {
+    tense = 'pluperfect';          baseVerb = findBaseFromPP(tokens[1]);
+  } else if ((tokens[0] === 'was' || tokens[0] === 'were') && tokens.length === 2 && tokens[1].endsWith('ing')) {
+    tense = 'imperfect';           baseVerb = findBaseFromIng(tokens[1]);
+  } else if (tokens.length === 1) {
+    const word = tokens[0];
+    // Bare base form is the dictionary key — let the standard path handle it
+    // (gives the user the full conjugation across all tenses).
+    if (ENGLISH_TO_SPANISH[word]) return null;
+    let b = findBaseFrom3rd(word);
+    if (b) { tense = 'present';   baseVerb = b; }
+    if (!tense) {
+      b = findBaseFromPast(word);
+      if (b) { tense = 'preterite'; baseVerb = b; }
+    }
+    if (!tense) {
+      b = findBaseFromIng(word);
+      if (b) { tense = 'imperfect'; baseVerb = b; }
+    }
+  }
+  if (!tense || !baseVerb) return null;
+  return { tense, baseVerb };
+}
+
+function parseEnglishPair(input) {
+  const tokens = (input || '').trim().toLowerCase().split(/\s+/);
+  if (tokens.length < 2) return null;
+  const pronounIdx = EN_PRONOUN_IDX[tokens[0]];
+  if (pronounIdx === undefined) return null;
+  const rest = tokens.slice(1);
+  let tense = null, baseVerb = null;
+
+  if (rest[0] === 'will' && rest[1] === 'have' && rest.length === 3) {
+    tense = 'future_perfect';      baseVerb = findBaseFromPP(rest[2]);
+  } else if (rest[0] === 'would' && rest[1] === 'have' && rest.length === 3) {
+    tense = 'conditional_perfect'; baseVerb = findBaseFromPP(rest[2]);
+  } else if (rest[0] === 'will' && rest.length === 2) {
+    tense = 'future';              baseVerb = findBaseFromBase(rest[1]);
+  } else if (rest[0] === 'would' && rest.length === 2) {
+    tense = 'conditional';         baseVerb = findBaseFromBase(rest[1]);
+  } else if ((rest[0] === 'have' || rest[0] === 'has') && rest.length === 2) {
+    tense = 'present_perfect';     baseVerb = findBaseFromPP(rest[1]);
+  } else if (rest[0] === 'had' && rest.length === 2) {
+    tense = 'pluperfect';          baseVerb = findBaseFromPP(rest[1]);
+  } else if ((rest[0] === 'was' || rest[0] === 'were') && rest.length === 2 && rest[1].endsWith('ing')) {
+    tense = 'imperfect';           baseVerb = findBaseFromIng(rest[1]);
+  } else if (rest.length === 1) {
+    const word = rest[0];
+    if (pronounIdx === 2) {
+      const b = findBaseFrom3rd(word);
+      if (b) { tense = 'present'; baseVerb = b; }
+    }
+    if (!tense) {
+      const b = findBaseFromBase(word);
+      if (b) { tense = 'present'; baseVerb = b; }
+    }
+    if (!tense) {
+      const b = findBaseFromPast(word);
+      if (b) { tense = 'preterite'; baseVerb = b; }
+    }
+  }
+  if (!tense || !baseVerb) return null;
+  return { pronounIdx, tense, baseVerb };
+}
+
+//=================================================================
+// FORM SPLITTING — for stem-ending dash styling
+// Per (tense, personIdx) candidate endings; longest match wins
+//=================================================================
+const ENDINGS_BY_TENSE = {
+  present:        { 0:['oy','é','y','o','e'],          1:['ás','as','es'],            2:['á','a','e'],              3:['ámos','emos','amos','imos','os'], 4:['án','an','en'] },
+  preterite:      { 0:['é','í','e','i'],               1:['aste','iste'],             2:['ió','yó','ó','io','o','e'], 3:['imos','amos'],                    4:['ieron','yeron','aron','eron'] },
+  imperfect:      { 0:['aba','ía','era','iba'],        1:['abas','ías','eras','ibas'],2:['aba','ía','era','iba'],   3:['ábamos','íamos','éramos','íbamos'], 4:['aban','ían','eran','iban'] },
+  future:         { 0:['é'], 1:['ás'], 2:['á'], 3:['emos'], 4:['án'] },
+  conditional:    { 0:['ía'], 1:['ías'], 2:['ía'], 3:['íamos'], 4:['ían'] },
+  present_subj:   { 0:['e','a'], 1:['es','as'], 2:['e','a'], 3:['emos','amos','os'], 4:['en','an'] },
+  imperfect_subj: { 0:['ara','iera'], 1:['aras','ieras'], 2:['ara','iera'], 3:['áramos','iéramos'], 4:['aran','ieran'] },
+  imperative_aff: { 0:['a','e'], 1:['e','a'], 2:['emos','amos','os'], 3:['en','an'] },
+};
+const COMPOUND_HABER_TENSE = {
+  present_perfect:      'present',
+  pluperfect:           'imperfect',
+  future_perfect:       'future',
+  conditional_perfect:  'conditional',
+  present_perfect_subj: 'present_subj',
+  pluperfect_subj:      'imperfect_subj',
+};
+function splitWithDash(form, tense, personIdx) {
+  // imperative negative: "no <verb>" — split the verb half using present_subj at personIdx+1
+  if (tense === 'imperative_neg') {
+    const m = form.match(/^(no\s+)(.+)$/);
+    if (!m) return splitCore(form, 'present_subj', personIdx + 1, '');
+    return splitCore(m[2], 'present_subj', personIdx + 1, m[1]);
+  }
+  // compound: "<haber> <participle>"
+  if (COMPOUND_HABER_TENSE[tense]) {
+    const sp = form.indexOf(' ');
+    if (sp > 0) {
+      const haber = form.slice(0, sp);
+      const part = form.slice(sp + 1);
+      const inner = splitCore(haber, COMPOUND_HABER_TENSE[tense], personIdx, '');
+      return inner + ' <span class="participle">' + part + '</span>';
+    }
+  }
+  return splitCore(form, tense, personIdx, '');
+}
+function splitCore(form, tense, personIdx, prefix) {
+  const table = ENDINGS_BY_TENSE[tense];
+  if (!table) return prefix + escapeHtml(form);
+  const cands = (table[personIdx] || []).slice().sort((a, b) => b.length - a.length);
+  for (const c of cands) {
+    if (form.endsWith(c) && form.length > c.length) {
+      const stem = form.slice(0, form.length - c.length);
+      return prefix + '<span class="stem">' + escapeHtml(stem) + '</span><span class="dash">-</span><span class="ending">' + escapeHtml(c) + '</span>';
+    }
+  }
+  return prefix + '<span class="stem">' + escapeHtml(form) + '</span>';
+}
+function escapeHtml(s) {
+  return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+//=================================================================
+// CONJUGATOR
+//=================================================================
+function getEnding(infinitive) {
+  const m = infinitive.match(/(ar|er|ír|ir)$/);
+  if (!m) return null;
+  return m[1] === 'ír' ? 'ir' : m[1];
+}
+function getStem(infinitive) {
+  return infinitive.endsWith('ír') ? infinitive.slice(0, -2) : infinitive.slice(0, -2);
+}
+function regularPresent(stem, ending) {
+  const e = ending === 'ar'
+    ? ['o','as','a','amos','an']
+    : ending === 'er'
+      ? ['o','es','e','emos','en']
+      : ['o','es','e','imos','en'];
+  return e.map(s => stem + s);
+}
+function regularPreterite(stem, ending) {
+  if (ending === 'ar') return [stem+'é', stem+'aste', stem+'ó', stem+'amos', stem+'aron'];
+  return [stem+'í', stem+'iste', stem+'ió', stem+'imos', stem+'ieron'];
+}
+function regularImperfect(stem, ending) {
+  if (ending === 'ar') return [stem+'aba', stem+'abas', stem+'aba', stem+'ábamos', stem+'aban'];
+  return [stem+'ía', stem+'ías', stem+'ía', stem+'íamos', stem+'ían'];
+}
+function regularFuture(infOrStem) {
+  return ['é','ás','á','emos','án'].map(s => infOrStem + s);
+}
+function regularConditional(infOrStem) {
+  return ['ía','ías','ía','íamos','ían'].map(s => infOrStem + s);
+}
+function regularPresentSubj(stem, ending) {
+  if (ending === 'ar') return [stem+'e', stem+'es', stem+'e', stem+'emos', stem+'en'];
+  return [stem+'a', stem+'as', stem+'a', stem+'amos', stem+'an'];
+}
+function regularImperfectSubj(stem, ending) {
+  if (ending === 'ar') return [stem+'ara', stem+'aras', stem+'ara', stem+'áramos', stem+'aran'];
+  return [stem+'iera', stem+'ieras', stem+'iera', stem+'iéramos', stem+'ieran'];
+}
+function regularParticiple(infinitive) {
+  const ending = getEnding(infinitive);
+  const stem = getStem(infinitive);
+  return ending === 'ar' ? stem+'ado' : stem+'ido';
+}
+function regularImperativeAff(stem, ending, presSubj) {
+  const tu = ending === 'ar' ? stem+'a' : stem+'e';
+  return [tu, presSubj[2], presSubj[3], presSubj[4]];
+}
+function imperativeNeg(presSubj) {
+  return ['no '+presSubj[1], 'no '+presSubj[2], 'no '+presSubj[3], 'no '+presSubj[4]];
+}
+function compound(haberForms, participle) {
+  return haberForms.map(h => h + ' ' + participle);
+}
+function conjugate(infinitive) {
+  const ending = getEnding(infinitive);
+  if (!ending) return null;
+  const stem = getStem(infinitive);
+  const irreg = IRREGULARS[infinitive] || {};
+
+  const present     = irreg.present     || regularPresent(stem, ending);
+  const preterite   = irreg.preterite   || regularPreterite(stem, ending);
+  const imperfect   = irreg.imperfect   || regularImperfect(stem, ending);
+  const future      = irreg.future      || (irreg.future_stem ? regularFuture(irreg.future_stem) : regularFuture(infinitive));
+  const conditional = irreg.conditional || (irreg.future_stem ? regularConditional(irreg.future_stem) : regularConditional(infinitive));
+  const present_subj   = irreg.present_subj   || regularPresentSubj(stem, ending);
+  const imperfect_subj = irreg.imperfect_subj || regularImperfectSubj(stem, ending);
+
+  const participle = irreg.participle || regularParticiple(infinitive);
+
+  const present_perfect       = compound(HABER.present,        participle);
+  const pluperfect            = compound(HABER.imperfect,      participle);
+  const future_perfect        = compound(HABER.future,         participle);
+  const conditional_perfect   = compound(HABER.conditional,    participle);
+  const present_perfect_subj  = compound(HABER.present_subj,   participle);
+  const pluperfect_subj       = compound(HABER.imperfect_subj, participle);
+
+  const imperative_aff = irreg.imperative_aff || regularImperativeAff(stem, ending, present_subj);
+  const imperative_neg = imperativeNeg(present_subj);
+
+  return {
+    infinitive, participle,
+    present, preterite, imperfect, future, conditional,
+    present_perfect, pluperfect, future_perfect, conditional_perfect,
+    present_subj, imperfect_subj, present_perfect_subj, pluperfect_subj,
+    imperative_aff, imperative_neg,
+  };
+}
+
+//=================================================================
+// LOOKUP
+//=================================================================
+function normalizeEnglish(s) {
+  return s.trim().toLowerCase().replace(/^to\s+/, '');
+}
+
+// Returns { type: 'en'|'es', enBase, infinitives } or null.
+// 1. English dictionary key (e.g. "speak")
+// 2. Known Spanish conjugated form (e.g. "hablo", "fui", "comemos")
+// 3. Anything else ending in -ar/-er/-ir → treat as Spanish infinitive
+function lookupVerb(input) {
+  const key = normalizeEnglish(input);
+  if (!key) return null;
+  if (ENGLISH_TO_SPANISH[key]) {
+    return { type: 'en', enBase: key, infinitives: ENGLISH_TO_SPANISH[key] };
+  }
+  // If the input is itself a known Spanish infinitive, use it directly.
+  if (SPANISH_VERB_LIST.indexOf(key) !== -1) {
+    return { type: 'es', enBase: currentEnglishBase, infinitives: [key] };
+  }
+  // Conjugated form → resolve to one or more infinitives.
+  const formKey = FORM_TO_INFINITIVE[key] ? key : (FORM_TO_INFINITIVE[stripAccents(key)] ? stripAccents(key) : null);
+  if (formKey) {
+    return { type: 'es', enBase: currentEnglishBase, infinitives: FORM_TO_INFINITIVE[formKey].slice() };
+  }
+  // Fallback: any -ar/-er/-ir shape → treat as a fresh Spanish infinitive.
+  if (getEnding(key)) {
+    return { type: 'es', enBase: currentEnglishBase, infinitives: [key] };
+  }
+  return null;
+}
+// Flat list of unique Spanish verbs reachable through the dictionary.
+// Used for ES-mode autocomplete + match chips.
+const SPANISH_VERB_LIST = (() => {
+  const set = new Set();
+  for (const list of Object.values(ENGLISH_TO_SPANISH)) {
+    for (const v of list) set.add(v);
+  }
+  return Array.from(set).sort();
+})();
+
+function stripAccents(s) {
+  if (!s || !s.normalize) return s;
+  // Strip combining diacritics (U+0300..U+036F)
+  return s.normalize('NFD').replace(/[̀-ͯ]/g, '');
+}
+
+// Build a reverse index: every conjugated single-word form → its infinitive(s).
+// Lets users type a conjugated form like "hablo" or "fueron" and still get
+// the base verb conjugated, while the typed form stays in the search bar.
+const FORM_TO_INFINITIVE = (() => {
+  const map = {};
+  const SIMPLE_TENSES = ['present','preterite','imperfect','future','conditional','present_subj','imperfect_subj','imperative_aff'];
+  for (const inf of SPANISH_VERB_LIST) {
+    let conj = null;
+    try { conj = conjugate(inf); } catch (e) { continue; }
+    if (!conj) continue;
+    for (const t of SIMPLE_TENSES) {
+      const arr = conj[t];
+      if (!arr) continue;
+      for (const form of arr) {
+        if (!form || form.indexOf(' ') !== -1 || form === '—') continue;
+        const k = stripAccents(form);
+        if (!map[k]) map[k] = [];
+        if (!map[k].includes(inf)) map[k].push(inf);
+        if (k !== form) {
+          if (!map[form]) map[form] = [];
+          if (!map[form].includes(inf)) map[form].push(inf);
+        }
+      }
+    }
+  }
+  return map;
+})();
+
+// Returns true when the EN/ES toggle is in Spanish mode.
+function isSpanishMode() {
+  return typeof speechLang !== 'undefined' && speechLang === 'es-ES';
+}
+
+// Match-chip search: English keys (EN mode), or Spanish infinitives + base
+// verbs of any matching conjugated form (ES mode).
+function searchVerbs(query, limit = 10) {
+  const qRaw = normalizeEnglish(query);
+  if (!qRaw) return [];
+  const q = stripAccents(qRaw);
+  const out = [];
+  const seen = new Set();
+  const score = (k) => {
+    const ka = stripAccents(k);
+    return ka === q ? 3 : ka.startsWith(q) ? 2 : ka.includes(q) ? 1 : 0;
+  };
+  if (isSpanishMode()) {
+    // 1. Direct infinitive matches (prefix/contains)
+    for (const k of SPANISH_VERB_LIST) {
+      const s = score(k);
+      if (s > 0 && !seen.has(k)) {
+        seen.add(k);
+        out.push({ key: k, sub: IRREGULARS[k] ? 'irregular' : '', score: s });
+      }
+    }
+    // 2. Conjugated-form matches → add their base verb(s)
+    //    e.g. typing "hablo", "fui", "tuvo", "comemos" surfaces hablar / ser / ir / tener / comer
+    for (const formKey of Object.keys(FORM_TO_INFINITIVE)) {
+      const ka = stripAccents(formKey);
+      let s = 0;
+      if (ka === q)             s = 3;
+      else if (ka.startsWith(q)) s = 2;
+      if (s === 0) continue;
+      for (const inf of FORM_TO_INFINITIVE[formKey]) {
+        if (seen.has(inf)) continue;
+        seen.add(inf);
+        // Slight score penalty so direct infinitive hits rank above derived ones.
+        out.push({ key: inf, sub: 'from "' + formKey + '"', score: s - 0.4 });
+      }
+      if (out.length >= limit * 2) break;
+    }
+  } else {
+    for (const k of Object.keys(ENGLISH_TO_SPANISH)) {
+      const s = score(k);
+      if (s > 0) out.push({ key: k, sub: ENGLISH_TO_SPANISH[k].join(' · '), score: s });
+    }
+  }
+  out.sort((a, b) => b.score - a.score || a.key.length - b.key.length);
+  return out.slice(0, limit);
+}
+
+//=================================================================
+// STATE
+//=================================================================
+const TOGGLE_KEY = 'spanishApp.tenseToggles.v1';
+const VERB_KEY   = 'spanishApp.lastVerb.v1';
+const COLLAPSE_KEY = 'spanishApp.togglesCollapsed.v1';
+const MOOD_COLLAPSE_KEY = 'spanishApp.moodCollapsed.v1';
+
+function loadMoodCollapsed() {
+  try {
+    const raw = localStorage.getItem(MOOD_COLLAPSE_KEY);
+    if (raw) return JSON.parse(raw);
+  } catch (e) {}
+  return { 'Indicative': false, 'Subjunctive': true, 'Imperative': true };
+}
+function saveMoodCollapsed(m) {
+  try { localStorage.setItem(MOOD_COLLAPSE_KEY, JSON.stringify(m)); } catch (e) {}
+}
+let moodCollapsed = loadMoodCollapsed();
+
+const PRONOUN_KEY = 'spanishApp.pronounToggles.v1';
+function loadPronounToggles() {
+  try {
+    const raw = localStorage.getItem(PRONOUN_KEY);
+    if (raw) return JSON.parse(raw);
+  } catch (e) {}
+  return [true, true, true, true, true]; // all on
+}
+function savePronounToggles(p) {
+  try { localStorage.setItem(PRONOUN_KEY, JSON.stringify(p)); } catch (e) {}
+}
+let pronounToggles = loadPronounToggles();
+
+function loadToggles() {
+  try {
+    const raw = localStorage.getItem(TOGGLE_KEY);
+    if (raw) return JSON.parse(raw);
+  } catch (e) {}
+  const d = {};
+  TENSES.forEach(t => d[t.key] = CORE_TENSES.includes(t.key));
+  return d;
+}
+function saveToggles(t) {
+  try { localStorage.setItem(TOGGLE_KEY, JSON.stringify(t)); } catch (e) {}
+}
+let toggles = loadToggles();
+let currentConjugations = [];
+// When set to { tense, pronounIdx } the tile output is filtered to a
+// single tense + pronoun row (driven by an English-pair input like "I spoke").
+let conjugateFilter = null;
+let acItems = [];
+let acIndex = -1;
+
+//=================================================================
+// RENDER — toggles
+//=================================================================
+function renderToggles() {
+  const c = document.getElementById('moodGroups');
+  c.innerHTML = '';
+  ['Indicative', 'Subjunctive', 'Imperative'].forEach(mood => {
+    const group = document.createElement('div');
+    group.className = 'mood-group' + (moodCollapsed[mood] ? ' collapsed' : '');
+    const moodTenses = TENSES.filter(t => t.mood === mood);
+    const activeCount = moodTenses.filter(t => toggles[t.key]).length;
+    const header = document.createElement('div');
+    header.className = 'mood-header';
+    header.innerHTML =
+      '<svg class="caret" viewBox="0 0 16 16" fill="currentColor"><path d="M4 6l4 4 4-4z"/></svg>' +
+      '<span class="name">' + mood + '</span>' +
+      '<span class="count' + (activeCount > 0 ? ' has-active' : '') + '">' + activeCount + ' / ' + moodTenses.length + '</span>';
+    header.addEventListener('click', () => {
+      moodCollapsed[mood] = !moodCollapsed[mood];
+      saveMoodCollapsed(moodCollapsed);
+      renderToggles();
+    });
+    group.appendChild(header);
+    const togs = document.createElement('div');
+    togs.className = 'toggles';
+    moodTenses.forEach(t => {
+      const el = document.createElement('div');
+      el.className = 'toggle' + (toggles[t.key] ? ' on' : '');
+      const ex = buildExample(t.key, currentEnglishBase);
+      el.innerHTML = '<span class="dot"></span><div class="text">' +
+                     '<span class="label">' + t.label + '</span>' +
+                     (ex ? '<span class="ex">' + escapeHtml(ex) + '</span>' : '') +
+                     '</div>';
+      el.title = t.es + ' · ' + ex;
+      el.addEventListener('click', () => {
+        toggles[t.key] = !toggles[t.key];
+        saveToggles(toggles);
+        renderToggles();
+        renderTiles();
+      });
+      togs.appendChild(el);
+    });
+    group.appendChild(togs);
+    c.appendChild(group);
+  });
+}
+
+//=================================================================
+// RENDER — pronoun toggles
+//=================================================================
+function renderPronounToggles() {
+  const c = document.getElementById('pronounToggles');
+  c.innerHTML = '';
+  // Row-major order for 2-col grid:
+  //   yo                 | nosotros
+  //   tú                 | (vosotros — placeholder, excluded)
+  //   él / ella / Ud.    | ellos / ellas / Uds.
+  const layout = [
+    { idx: 0, label: PRONOUNS_5[0] },             // yo
+    { idx: 3, label: PRONOUNS_5[3] },             // nosotros
+    { idx: 1, label: PRONOUNS_5[1] },             // tú
+    { idx: -1, label: 'vosotros', placeholder: true },
+    { idx: 2, label: PRONOUNS_5[2] },             // él / ella / Ud.
+    { idx: 4, label: PRONOUNS_5[4] },             // ellos / ellas / Uds.
+  ];
+  layout.forEach(cell => {
+    const el = document.createElement('div');
+    if (cell.placeholder) {
+      el.className = 'toggle placeholder';
+      el.title = 'vosotros — excluded';
+      el.innerHTML = '<span class="dot"></span><div class="text"><span class="label">' + cell.label + '</span></div>';
+    } else {
+      el.className = 'toggle' + (pronounToggles[cell.idx] ? ' on' : '');
+      el.innerHTML = '<span class="dot"></span><div class="text"><span class="label">' + cell.label + '</span></div>';
+      el.addEventListener('click', () => {
+        pronounToggles[cell.idx] = !pronounToggles[cell.idx];
+        savePronounToggles(pronounToggles);
+        renderPronounToggles();
+        renderTiles();
+      });
+    }
+    c.appendChild(el);
+  });
+}
+
+//=================================================================
+// RENDER — suggestions
+//=================================================================
+// Default chips when the input is empty — separate lists per language mode.
+// Both lists are filtered against the actual dictionary so removed entries
+// won't produce dead chips.
+const SUGGEST_DEFAULTS_EN = ['be','have','do','go','see','know','want','come','eat','speak'];
+const SUGGEST_DEFAULTS_ES = ['ser','estar','tener','hacer','ir','decir','ver','dar','saber','querer'];
+
+function renderSuggestions() {
+  const c = document.getElementById('suggestions');
+  const query = (inputEl && inputEl.value || '').trim();
+  let samples;
+  let label;
+  if (query) {
+    samples = searchVerbs(query, 10).map(it => it.key);
+    label = samples.length ? 'Matches' : 'No match';
+  } else if (isSpanishMode()) {
+    samples = SUGGEST_DEFAULTS_ES.filter(v => SPANISH_VERB_LIST.includes(v));
+    label = 'Try';
+  } else {
+    samples = SUGGEST_DEFAULTS_EN.filter(v => ENGLISH_TO_SPANISH[v]);
+    label = 'Try';
+  }
+  c.innerHTML = '<span class="label">' + label + '</span>';
+  samples.forEach(s => {
+    const b = document.createElement('button');
+    b.className = 'chip-btn';
+    b.textContent = s;
+    // Don't blur the input when tapping a chip — its own click runs the search.
+    b.addEventListener('mousedown', (e) => e.preventDefault());
+    b.addEventListener('click', () => {
+      inputEl.value = s;
+      clearBtn.classList.add('visible');
+      hideAutocomplete();
+      handleConjugate(s);
+      renderSuggestions();
+    });
+    c.appendChild(b);
+  });
+}
+
+//=================================================================
+// RENDER — autocomplete
+//=================================================================
+// Autocomplete dropdown removed — only the Matches chips below the input
+// reflect dictionary suggestions now. These no-ops keep older call sites safe.
+function showAutocomplete() {}
+function hideAutocomplete() {}
+
+//=================================================================
+// RENDER — tiles (with English "to make" examples per row)
+//=================================================================
+function renderTiles() {
+  const tilesEl = document.getElementById('tiles');
+  const empty = document.getElementById('emptyState');
+  tilesEl.innerHTML = '';
+
+  // When a filter is active (English-pair input), restrict tiles to the
+  // single matching tense; otherwise honor the user's tense toggles.
+  const active = conjugateFilter
+    ? TENSES.filter(t => t.key === conjugateFilter.tense)
+    : TENSES.filter(t => toggles[t.key]);
+
+  if (currentConjugations.length === 0) {
+    empty.style.display = 'block';
+    empty.textContent = 'Enter an English verb above to see conjugation tiles.';
+    return;
+  }
+  if (active.length === 0) {
+    empty.style.display = 'block';
+    empty.textContent = 'No tenses selected. Toggle some on above.';
+    return;
+  }
+  empty.style.display = 'none';
+
+  for (const conj of currentConjugations) {
+    const header = document.createElement('div');
+    header.className = 'verb-header';
+    const enForms = getEnForms(currentEnglishBase) || getEnForms('be');
+    header.innerHTML =
+      '<div class="es">' + conj.conjugations.infinitive + '</div>' +
+      '<div class="pp">past part. <em>' + conj.conjugations.participle + '</em>' +
+      '<span class="pp-en">' + enForms.pp + '</span></div>';
+    tilesEl.appendChild(header);
+
+    for (const t of active) {
+      const forms = conj.conjugations[t.key];
+      if (!forms) continue;
+      const tile = document.createElement('div');
+      tile.className = 'tile';
+      const head = document.createElement('div');
+      head.className = 'tile-head';
+      head.innerHTML =
+        '<span class="label">' + t.label + '</span>' +
+        '<span class="es-name">' + t.es + '</span>';
+      tile.appendChild(head);
+      // Imperative tiles use 4 pronouns (tú, Ud., nos, Uds.) which
+      // map to indices 1..4 of the 5-pronoun pronoun-toggle set.
+      const isImp = t.pronouns.length === 4;
+      forms.forEach((form, i) => {
+        if (conjugateFilter && conjugateFilter.pronounIdx !== undefined) {
+          // Pair filter: single-pronoun row only
+          if (i !== conjugateFilter.pronounIdx) return;
+        } else {
+          // Standard or tense-only filter: respect the pronoun-filter toggles
+          const toggleIdx = isImp ? i + 1 : i;
+          if (!pronounToggles[toggleIdx]) return;
+        }
+        const row = document.createElement('div');
+        row.className = 'row';
+        const pron = document.createElement('div');
+        pron.className = 'pron';
+        pron.textContent = (t.pronouns[i] || '');
+        const cell = document.createElement('div');
+        cell.className = 'form-cell';
+        const esForm = document.createElement('div');
+        esForm.className = 'es-form';
+        esForm.innerHTML = splitWithDash(form, t.key, i);
+        const enForm = document.createElement('div');
+        enForm.className = 'en-form';
+        enForm.textContent = buildRowEnglish(t.key, i, currentEnglishBase);
+        cell.appendChild(esForm);
+        cell.appendChild(enForm);
+        row.appendChild(pron);
+        row.appendChild(cell);
+        tile.appendChild(row);
+      });
+      tilesEl.appendChild(tile);
+    }
+  }
+}
+
+//=================================================================
+// HANDLE CONJUGATE
+//=================================================================
+function handleConjugate(forced) {
+  const input = (forced !== undefined ? forced : document.getElementById('verbInput').value);
+  const result = document.getElementById('verbResult');
+
+  // First, try to parse as an English pronoun + conjugated verb pair.
+  // If it parses cleanly, we conjugate the base verb but show only the
+  // tense + pronoun row that the user asked about.
+  const pair = parseEnglishPair(input);
+  if (pair) {
+    const inf = ENGLISH_TO_SPANISH[pair.baseVerb] || null;
+    if (inf) {
+      conjugateFilter = { tense: pair.tense, pronounIdx: pair.pronounIdx };
+      currentEnglishBase = pair.baseVerb;
+      currentConjugations = inf.map(v => ({
+        infinitive: v,
+        conjugations: conjugate(v),
+      })).filter(c => c.conjugations);
+      const tenseLabel = (TENSES.find(t => t.key === pair.tense) || {}).label || pair.tense;
+      result.className = 'verb-result';
+      result.innerHTML =
+        currentConjugations.map(c => '<strong>' + c.infinitive + '</strong>').join(' &nbsp;·&nbsp; ') +
+        '<span class="pill">' + tenseLabel + ' · ' + ['yo','tú','él','nos.','ellos'][pair.pronounIdx] + '</span>';
+      try { localStorage.setItem(VERB_KEY, input); } catch (e) {}
+      renderToggles();
+      renderTiles();
+      return;
+    }
+  }
+
+  // Next, try a bare English conjugated verb (no pronoun) → filter to the
+  // matching tense tile and let the pronoun toggles decide which rows show.
+  const conjOnly = parseEnglishConjugation(input);
+  if (conjOnly) {
+    const inf = ENGLISH_TO_SPANISH[conjOnly.baseVerb] || null;
+    if (inf) {
+      conjugateFilter = { tense: conjOnly.tense };
+      currentEnglishBase = conjOnly.baseVerb;
+      currentConjugations = inf.map(v => ({
+        infinitive: v,
+        conjugations: conjugate(v),
+      })).filter(c => c.conjugations);
+      const tenseLabel = (TENSES.find(t => t.key === conjOnly.tense) || {}).label || conjOnly.tense;
+      result.className = 'verb-result';
+      result.innerHTML =
+        currentConjugations.map(c => '<strong>' + c.infinitive + '</strong>').join(' &nbsp;·&nbsp; ') +
+        '<span class="pill">' + tenseLabel + '</span>';
+      try { localStorage.setItem(VERB_KEY, input); } catch (e) {}
+      renderToggles();
+      renderTiles();
+      return;
+    }
+  }
+
+  // Not a pair or conjugation → clear any previous filter and use standard lookup.
+  conjugateFilter = null;
+  const lookup = lookupVerb(input);
+
+  if (!lookup) {
+    if (input.trim()) {
+      result.className = 'verb-result warn';
+      result.textContent = 'Verb not found. Try an English verb (e.g. "speak") or a Spanish infinitive (e.g. "hablar").';
+    } else {
+      result.className = 'verb-result';
+      result.textContent = '';
+      currentEnglishBase = 'be';
+    }
+    currentConjugations = [];
+    renderToggles();
+    renderTiles();
+    return;
+  }
+
+  // Only update English base from English-side lookups; Spanish input
+  // keeps whatever English base was last shown.
+  if (lookup.type === 'en') currentEnglishBase = lookup.enBase || 'be';
+  currentConjugations = lookup.infinitives.map(inf => ({
+    infinitive: inf,
+    conjugations: conjugate(inf),
+  })).filter(c => c.conjugations);
+
+  result.className = 'verb-result';
+  if (lookup.type === 'es') {
+    if (lookup.infinitives.length === 1) {
+      const inf = lookup.infinitives[0];
+      result.innerHTML = '<strong>' + inf + '</strong>' +
+        (IRREGULARS[inf] ? '<span class="pill">irregular</span>' : '<span class="pill">regular</span>');
+    } else {
+      result.innerHTML = lookup.infinitives.map(inf => '<strong>' + inf + '</strong>').join(' &nbsp;·&nbsp; ') +
+        '<span class="pill">' + lookup.infinitives.length + ' matches</span>';
+    }
+  } else if (currentConjugations.length === 1) {
+    const c = currentConjugations[0];
+    const isIrreg = !!IRREGULARS[c.infinitive];
+    result.innerHTML = '<strong>' + c.infinitive + '</strong>' +
+      (isIrreg ? '<span class="pill">irregular</span>' : '<span class="pill">regular</span>');
+  } else {
+    result.innerHTML = currentConjugations.map(c =>
+      '<strong>' + c.infinitive + '</strong>'
+    ).join(' &nbsp;·&nbsp; ') + '<span class="pill">multiple</span>';
+  }
+
+  try { localStorage.setItem(VERB_KEY, input); } catch (e) {}
+  renderToggles();
+  renderTiles();
+}
+
+//=================================================================
+// EVENTS
+//=================================================================
+const inputEl = document.getElementById('verbInput');
+const clearBtn = document.getElementById('clearBtn');
+
+inputEl.addEventListener('input', (e) => {
+  const v = e.target.value;
+  clearBtn.classList.toggle('visible', v.length > 0);
+  renderSuggestions();
+});
+inputEl.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') {
+    e.preventDefault();
+    // Blur fires the conjugation; the blur listener does the work.
+    inputEl.blur();
+  }
+});
+// Run the search when focus leaves the input — tap anywhere outside or
+// press Enter and whatever was typed up to that point gets conjugated.
+inputEl.addEventListener('blur', () => {
+  if (inputEl.value.trim()) {
+    handleConjugate();
+    renderSuggestions();
+  }
+});
+clearBtn.addEventListener('click', () => {
+  inputEl.value = '';
+  clearBtn.classList.remove('visible');
+  hideAutocomplete();
+  document.getElementById('verbResult').textContent = '';
+  currentConjugations = [];
+  currentEnglishBase = 'be';
+  conjugateFilter = null;
+  renderToggles();
+  renderTiles();
+  renderSuggestions();
+  inputEl.focus();
+});
+
+document.getElementById('toggleAllOn').addEventListener('click', () => {
+  TENSES.forEach(t => toggles[t.key] = true);
+  saveToggles(toggles); renderToggles(); renderTiles();
+});
+document.getElementById('toggleAllOff').addEventListener('click', () => {
+  TENSES.forEach(t => toggles[t.key] = false);
+  saveToggles(toggles); renderToggles(); renderTiles();
+});
+document.getElementById('presetCore').addEventListener('click', () => {
+  TENSES.forEach(t => toggles[t.key] = CORE_TENSES.includes(t.key));
+  saveToggles(toggles); renderToggles(); renderTiles();
+});
+document.getElementById('pronounAllOn').addEventListener('click', () => {
+  pronounToggles = [true, true, true, true, true];
+  savePronounToggles(pronounToggles); renderPronounToggles(); renderTiles();
+});
+document.getElementById('pronounAllOff').addEventListener('click', () => {
+  pronounToggles = [false, false, false, false, false];
+  savePronounToggles(pronounToggles); renderPronounToggles(); renderTiles();
+});
+
+// Pronouns card collapse
+const pronounsCard = document.getElementById('pronounsCard');
+const pronounsHeader = pronounsCard.querySelector('.card-header');
+const PRONOUN_COLLAPSE_KEY = 'spanishApp.pronounsCollapsed.v1';
+// Pronoun toggles default to collapsed; expand only if user has opened it.
+try {
+  if (localStorage.getItem(PRONOUN_COLLAPSE_KEY) !== '0') pronounsCard.classList.add('collapsed');
+} catch (e) { pronounsCard.classList.add('collapsed'); }
+pronounsHeader.addEventListener('click', () => {
+  pronounsCard.classList.toggle('collapsed');
+  try {
+    localStorage.setItem(PRONOUN_COLLAPSE_KEY, pronounsCard.classList.contains('collapsed') ? '1' : '0');
+  } catch (e) {}
+});
+
+// Keep the input focused when tapping the inline buttons — without this
+// the input would blur, fire its blur-search handler with whatever's
+// typed, then the button's own click handler would fire (double-work).
+['langBtn','micBtn','clearBtn'].forEach(id => {
+  const el = document.getElementById(id);
+  if (el) el.addEventListener('mousedown', (e) => e.preventDefault());
+});
+
+// Speech recognition
+const SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
+const SPEECH_LANG_KEY = 'spanishApp.speechLang.v1';
+const langBtn = document.getElementById('langBtn');
+const micBtn  = document.getElementById('micBtn');
+let speechLang = (function() {
+  try { return localStorage.getItem(SPEECH_LANG_KEY) || 'en-US'; } catch (e) { return 'en-US'; }
+})();
+function updateLangBtn() {
+  const isEs = speechLang === 'es-ES';
+  langBtn.textContent = isEs ? 'ES' : 'EN';
+  langBtn.dataset.lang = isEs ? 'es' : 'en';
+  langBtn.title = 'Search direction: ' + (isEs ? 'Spanish' : 'English') + ' — tap to switch';
+}
+updateLangBtn();
+langBtn.addEventListener('click', () => {
+  speechLang = speechLang === 'en-US' ? 'es-ES' : 'en-US';
+  try { localStorage.setItem(SPEECH_LANG_KEY, speechLang); } catch (e) {}
+  updateLangBtn();
+  // Re-source the search results to the newly active language
+  renderSuggestions();
+  if (inputEl.value) showAutocomplete(inputEl.value);
+});
+
+let activeRecognition = null;
+if (!SpeechRec) {
+  micBtn.disabled = true;
+  micBtn.title = 'Speech recognition not supported in this browser';
+}
+// Speech is independent of the EN/ES toggle. We capture the spoken word
+// using the user's system locale, then verify it against both the English
+// dictionary and the Spanish verb list — whichever matches drives the
+// conjugation. If neither matches, the transcript is dropped into the
+// input for manual editing.
+function pickSpeechLang() {
+  const sys = (navigator.language || 'en-US');
+  return sys; // e.g. 'en-US', 'es-MX', 'es-ES' — browser decides
+}
+function verifyAndApplyTranscript(raw) {
+  const transcript = (raw || '').toLowerCase().replace(/[.,!?¿¡]/g, '').trim();
+  if (!transcript) return;
+  const norm = stripAccents(transcript.replace(/^to\s+/, ''));
+  // English dictionary lookup (accent-insensitive, exact key match)
+  const enKey = Object.keys(ENGLISH_TO_SPANISH).find(k => stripAccents(k) === norm);
+  // Spanish verb list lookup
+  const esKey = SPANISH_VERB_LIST.find(k => stripAccents(k) === norm);
+  // Or any -ar/-er/-ir Spanish-shaped fallback
+  const matched = enKey || esKey || (getEnding(norm) ? norm : transcript);
+  inputEl.value = matched;
+  clearBtn.classList.add('visible');
+  handleConjugate(matched);
+  renderSuggestions();
+}
+micBtn.addEventListener('click', () => {
+  if (!SpeechRec) return;
+  if (activeRecognition) { activeRecognition.stop(); return; }
+  const r = new SpeechRec();
+  r.lang = pickSpeechLang();
+  r.continuous = false;
+  r.interimResults = false;
+  r.maxAlternatives = 3;
+  r.onresult = (event) => {
+    // Try each alternative; first one that maps to a known verb wins.
+    const alts = event.results[0];
+    let chosen = alts[0] && alts[0].transcript || '';
+    for (let i = 0; i < alts.length; i++) {
+      const t = (alts[i].transcript || '').toLowerCase().replace(/[.,!?¿¡]/g, '').trim();
+      const norm = stripAccents(t.replace(/^to\s+/, ''));
+      if (Object.keys(ENGLISH_TO_SPANISH).some(k => stripAccents(k) === norm) ||
+          SPANISH_VERB_LIST.some(k => stripAccents(k) === norm)) {
+        chosen = t;
+        break;
+      }
+    }
+    verifyAndApplyTranscript(chosen);
+  };
+  r.onerror = () => { /* no-op; browser will surface in console */ };
+  r.onend = () => {
+    activeRecognition = null;
+    micBtn.classList.remove('recording');
+  };
+  try { r.start(); activeRecognition = r; micBtn.classList.add('recording'); }
+  catch (e) { activeRecognition = null; micBtn.classList.remove('recording'); }
+});
+
+// Collapse toggles card
+const togglesCard = document.getElementById('togglesCard');
+const togglesHeader = togglesCard.querySelector('.card-header');
+// Tense toggles default to collapsed; expand only if the user has explicitly opened it.
+try {
+  if (localStorage.getItem(COLLAPSE_KEY) !== '0') togglesCard.classList.add('collapsed');
+} catch (e) { togglesCard.classList.add('collapsed'); }
+togglesHeader.addEventListener('click', () => {
+  togglesCard.classList.toggle('collapsed');
+  try {
+    localStorage.setItem(COLLAPSE_KEY, togglesCard.classList.contains('collapsed') ? '1' : '0');
+  } catch (e) {}
+});
+
+//=================================================================
+// INIT
+//=================================================================
+renderToggles();
+renderPronounToggles();
+renderSuggestions();
+
+// Persist all toggle/collapse state on page hide / app backgrounding so a
+// closed tab, swipe-killed Android PWA, or a navigation-away never loses
+// the user's selections. Each click already calls its save function, but
+// this is a belt-and-suspenders flush in case a handler was bypassed.
+function persistAllState() {
+  try {
+    saveToggles(toggles);
+    savePronounToggles(pronounToggles);
+    saveMoodCollapsed(moodCollapsed);
+    localStorage.setItem(COLLAPSE_KEY, togglesCard.classList.contains('collapsed') ? '1' : '0');
+    localStorage.setItem(PRONOUN_COLLAPSE_KEY, pronounsCard.classList.contains('collapsed') ? '1' : '0');
+    if (typeof speechLang !== 'undefined') localStorage.setItem(SPEECH_LANG_KEY, speechLang);
+  } catch (e) {}
+}
+// pagehide is more reliable than beforeunload on mobile / PWAs.
+window.addEventListener('pagehide', persistAllState);
+// Also when the tab/PWA goes to background — Android may kill the page later.
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) persistAllState();
+});
+
+// Default verb: 'be' on every load
+inputEl.value = 'be';
+clearBtn.classList.add('visible');
+handleConjugate('be');
+
+// PWA service worker registration — caches the app shell so it works
+// offline after the first load. No-ops on browsers that don't support it.
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('service-worker.js').catch(() => {});
+  });
+}
+</script>
+</body>
+</html>
