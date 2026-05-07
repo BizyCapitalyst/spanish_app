@@ -593,6 +593,18 @@
     font-weight: 500;
     color: var(--text);
     letter-spacing: -0.005em;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .row .es-form:active { opacity: 0.6; }
+  .verb-header .es { cursor: pointer; }
+  .verb-header .es:active { opacity: 0.7; }
+  .verb-header .play-hint {
+    font-size: 11px;
+    color: var(--text-dim);
+    margin-left: 6px;
+    font-weight: 400;
+    letter-spacing: 0;
   }
   .row .en-form {
     text-align: right;
@@ -607,6 +619,8 @@
   .es-form .dash      { display: none; }
   .es-form .ending    { color: var(--orange); font-weight: 600; }
   .es-form .participle{ color: var(--blue); margin-left: 4px; font-weight: 500; }
+  .es-form .reflexive-pron { color: var(--text-mid); font-weight: 500; }
+  .es-form .negation       { color: var(--text-dim); }
 
   /* EMPTY */
   .empty-state {
@@ -647,8 +661,8 @@
 
   <nav>
     <button class="active">Conjugation</button>
-    <button disabled title="Coming soon">Testing</button>
     <button disabled title="Coming soon">Vocabulary</button>
+    <button disabled title="Coming soon">Testing</button>
   </nav>
 
   <div class="card card-collapsible" id="togglesCard">
@@ -2782,11 +2796,34 @@ const COMPOUND_HABER_TENSE = {
   pluperfect_subj:      'imperfect_subj',
 };
 function splitWithDash(form, tense, personIdx) {
-  // imperative negative: "no <verb>" — split the verb half using present_subj at personIdx+1
+  // Reflexive prefix: "me/te/se/nos <verb>" — peel pronoun, recurse on the rest.
+  // Handles simple reflexive tenses ("me ducho") and compound reflexive tenses
+  // ("me he duchado") via a single recursive descent.
+  const reflPre = form.match(/^(me|te|se|nos)\s+(.+)$/);
+  if (reflPre && tense !== 'imperative_neg') {
+    const innerHTML = splitWithDash(reflPre[2], tense, personIdx);
+    return '<span class="reflexive-pron">' + escapeHtml(reflPre[1]) + '</span> ' + innerHTML;
+  }
+  // imperative negative: handles "no <verb>" and reflexive "no <pron> <verb>"
   if (tense === 'imperative_neg') {
+    const negRefl = form.match(/^(no\s+)(me|te|se|nos)(\s+)(.+)$/);
+    if (negRefl) {
+      const negPrefix = '<span class="negation">' + escapeHtml(negRefl[1]) + '</span>'
+                      + '<span class="reflexive-pron">' + escapeHtml(negRefl[2]) + '</span>'
+                      + escapeHtml(negRefl[3]);
+      return splitCore(negRefl[4], 'present_subj', personIdx + 1, negPrefix);
+    }
     const m = form.match(/^(no\s+)(.+)$/);
     if (!m) return splitCore(form, 'present_subj', personIdx + 1, '');
     return splitCore(m[2], 'present_subj', personIdx + 1, m[1]);
+  }
+  // imperative affirmative with attached reflexive pronoun (dúchate, vámonos, etc.)
+  if (tense === 'imperative_aff') {
+    const cliticMatch = form.match(/^(.+?)(te|se|nos)$/);
+    if (cliticMatch && cliticMatch[1].length >= 3) {
+      return '<span class="stem">' + escapeHtml(cliticMatch[1]) + '</span>'
+           + '<span class="reflexive-pron">' + escapeHtml(cliticMatch[2]) + '</span>';
+    }
   }
   // compound: "<haber> <participle>"
   if (COMPOUND_HABER_TENSE[tense]) {
@@ -2814,6 +2851,49 @@ function splitCore(form, tense, personIdx, prefix) {
 }
 function escapeHtml(s) {
   return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+// Audio playback via Web Speech API. Tap any Spanish form / infinitive to hear it.
+// Setting `lang` alone is not enough — many browsers ignore it and use the
+// default voice, which reads Spanish letters with English phonemes. We must
+// explicitly choose a Spanish voice from the device's installed voice list.
+let _spanishVoice = null;
+let _voiceWarned  = false;
+function pickSpanishVoice() {
+  if (!('speechSynthesis' in window)) return null;
+  let voices = [];
+  try { voices = speechSynthesis.getVoices() || []; } catch (e) { return null; }
+  if (!voices.length) return null;
+  // Preference order: es-ES, es-MX, es-US, es-419, any es-*
+  const preferred = ['es-ES','es-MX','es-US','es-419','es-AR','es-CO','es-CL'];
+  for (const code of preferred) {
+    const v = voices.find(v => v.lang === code);
+    if (v) return v;
+  }
+  return voices.find(v => v.lang && v.lang.toLowerCase().startsWith('es')) || null;
+}
+if ('speechSynthesis' in window) {
+  // Voices populate asynchronously on most browsers — listen + cache.
+  const refreshVoice = () => { _spanishVoice = pickSpanishVoice(); };
+  refreshVoice();
+  try { speechSynthesis.addEventListener('voiceschanged', refreshVoice); } catch (e) {}
+}
+function speakSpanish(text) {
+  if (!('speechSynthesis' in window) || !text) return;
+  try {
+    speechSynthesis.cancel();
+    if (!_spanishVoice) _spanishVoice = pickSpanishVoice();
+    const u = new SpeechSynthesisUtterance(text);
+    u.lang = (_spanishVoice && _spanishVoice.lang) || 'es-ES';
+    u.rate = 0.9;
+    if (_spanishVoice) {
+      u.voice = _spanishVoice;
+    } else if (!_voiceWarned) {
+      _voiceWarned = true;
+      console.warn('No Spanish TTS voice installed. Install a Spanish voice in your OS speech settings to hear correct pronunciation.');
+    }
+    speechSynthesis.speak(u);
+  } catch (e) { /* unsupported — silent no-op */ }
 }
 
 //=================================================================
@@ -2872,7 +2952,90 @@ function imperativeNeg(presSubj) {
 function compound(haberForms, participle) {
   return haberForms.map(h => h + ' ' + participle);
 }
+
+// === Reflexive verb support =====================================
+// Adds an accent on the originally-stressed vowel when needed (so the
+// stress doesn't drift after a clitic pronoun is appended).
+function addAccentIfNeeded(form) {
+  if (!form || /[áéíóúÁÉÍÓÚ]/.test(form)) return form;
+  const vowelGroups = form.match(/[aeiouAEIOU]+/g) || [];
+  if (vowelGroups.length < 2) return form; // 1-syllable: no accent needed
+  // Stress falls on penultimate vowel group for words ending in vowel/n/s
+  // (the ones we get out of the imperative). After cliticisation that
+  // syllable becomes antepenultimate or earlier — needs a written accent.
+  const targetIdx = vowelGroups.length - 2;
+  let count = 0, i = 0;
+  while (i < form.length) {
+    if (/[aeiouAEIOU]/.test(form[i])) {
+      const start = i;
+      while (i < form.length && /[aeiouAEIOU]/.test(form[i])) i++;
+      if (count === targetIdx) {
+        const grp = form.slice(start, i);
+        // Prefer the strong vowel (a, e, o); fall back to last vowel.
+        let pos = grp.length - 1;
+        for (let k = 0; k < grp.length; k++) {
+          if ('aeoAEO'.includes(grp[k])) { pos = k; break; }
+        }
+        const map = {a:'á',e:'é',i:'í',o:'ó',u:'ú',A:'Á',E:'É',I:'Í',O:'Ó',U:'Ú'};
+        return form.slice(0, start + pos) + map[grp[pos]] + form.slice(start + pos + 1);
+      }
+      count++;
+    } else { i++; }
+  }
+  return form;
+}
+
+// Attach a reflexive pronoun to an affirmative imperative form,
+// adjusting accent and (for nosotros) dropping the final s.
+function attachReflexive(form, idx) {
+  if (!form || form === '—') return form;
+  // idx: 0=tú, 1=Ud., 2=nosotros, 3=Uds.
+  if (idx === 2) {
+    const stripped = form.endsWith('s') ? form.slice(0, -1) : form;
+    return addAccentIfNeeded(stripped) + 'nos';
+  }
+  const pron = ['te', 'se', null, 'se'][idx];
+  return addAccentIfNeeded(form) + pron;
+}
+
+function conjugateReflexive(reflexiveInf) {
+  const baseInf = reflexiveInf.slice(0, -2); // 'ducharse' → 'duchar'
+  if (!getEnding(baseInf)) return null;
+  const baseConj = conjugateNonReflexive(baseInf);
+  if (!baseConj) return null;
+  const pre = ['me', 'te', 'se', 'nos', 'se'];
+  const result = { infinitive: reflexiveInf, participle: baseConj.participle };
+  // Simple tenses + compound tenses: pronoun + space + verb form
+  const PRONOUN_TENSES = [
+    'present','preterite','imperfect','future','conditional',
+    'present_subj','imperfect_subj',
+    'present_perfect','pluperfect','future_perfect','conditional_perfect',
+    'present_perfect_subj','pluperfect_subj'
+  ];
+  for (const t of PRONOUN_TENSES) {
+    if (baseConj[t]) {
+      result[t] = baseConj[t].map((f, i) => pre[i] + ' ' + f);
+    }
+  }
+  // Imperative affirmative: pronouns ATTACH to the verb (with accent shift).
+  result.imperative_aff = baseConj.imperative_aff.map((f, i) => attachReflexive(f, i));
+  // Imperative negative: 'no [pron] [verb]' — pronoun goes between 'no' and verb.
+  const impPron = ['te', 'se', 'nos', 'se'];
+  result.imperative_neg = baseConj.imperative_neg.map((f, i) => {
+    if (f && f.startsWith('no ')) return 'no ' + impPron[i] + ' ' + f.slice(3);
+    return f;
+  });
+  return result;
+}
+
 function conjugate(infinitive) {
+  if (infinitive && infinitive.endsWith('se') && infinitive.length > 4) {
+    return conjugateReflexive(infinitive);
+  }
+  return conjugateNonReflexive(infinitive);
+}
+
+function conjugateNonReflexive(infinitive) {
   const ending = getEnding(infinitive);
   if (!ending) return null;
   const stem = getStem(infinitive);
@@ -2969,7 +3132,10 @@ const FORM_TO_INFINITIVE = (() => {
       const arr = conj[t];
       if (!arr) continue;
       for (const form of arr) {
-        if (!form || form.indexOf(' ') !== -1 || form === '—') continue;
+        if (!form || form === '—') continue;
+        // Index forms with spaces only when they're reflexive ("me ducho",
+        // "te has duchado", etc.) so compound non-reflexive doesn't bloat the index.
+        if (form.indexOf(' ') !== -1 && !/^(me|te|se|nos)\s/.test(form)) continue;
         const k = stripAccents(form);
         if (!map[k]) map[k] = [];
         if (!map[k].includes(inf)) map[k].push(inf);
@@ -3254,9 +3420,13 @@ function renderTiles() {
     header.className = 'verb-header';
     const enForms = getEnForms(currentEnglishBase) || getEnForms('be');
     header.innerHTML =
-      '<div class="es">' + conj.conjugations.infinitive + '</div>' +
+      '<div class="es" title="Tap to hear">' + conj.conjugations.infinitive +
+      '<span class="play-hint">🔊</span></div>' +
       '<div class="pp">past part. <em>' + conj.conjugations.participle + '</em>' +
       '<span class="pp-en">' + enForms.pp + '</span></div>';
+    // Wire the infinitive to speak on tap
+    const headerEs = header.querySelector('.es');
+    if (headerEs) headerEs.addEventListener('click', () => speakSpanish(conj.conjugations.infinitive));
     tilesEl.appendChild(header);
 
     for (const t of active) {
@@ -3291,7 +3461,9 @@ function renderTiles() {
         cell.className = 'form-cell';
         const esForm = document.createElement('div');
         esForm.className = 'es-form';
+        esForm.title = 'Tap to hear';
         esForm.innerHTML = splitWithDash(form, t.key, i);
+        esForm.addEventListener('click', () => speakSpanish(form));
         const enForm = document.createElement('div');
         enForm.className = 'en-form';
         enForm.textContent = buildRowEnglish(t.key, i, currentEnglishBase);
