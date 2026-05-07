@@ -3683,7 +3683,10 @@ function updateLangBtn() {
   const isEs = speechLang === 'es-ES';
   langBtn.textContent = isEs ? 'ES' : 'EN';
   langBtn.dataset.lang = isEs ? 'es' : 'en';
-  langBtn.title = 'Search direction: ' + (isEs ? 'Spanish' : 'English') + ' — tap to switch';
+  langBtn.title = 'Search & speech: ' + (isEs ? 'Spanish' : 'English') + ' — tap to switch';
+  if (typeof micBtn !== 'undefined' && micBtn) {
+    micBtn.title = 'Speak a verb (' + (isEs ? 'Spanish' : 'English') + ')';
+  }
 }
 updateLangBtn();
 langBtn.addEventListener('click', () => {
@@ -3700,14 +3703,15 @@ if (!SpeechRec) {
   micBtn.disabled = true;
   micBtn.title = 'Speech recognition not supported in this browser';
 }
-// Speech is independent of the EN/ES toggle. We capture the spoken word
-// using the user's system locale, then verify it against both the English
-// dictionary and the Spanish verb list — whichever matches drives the
-// conjugation. If neither matches, the transcript is dropped into the
-// input for manual editing.
+// Speech recognition language follows the EN/ES toggle: ES → es-ES
+// (Spanish recognition), EN → en-US. The Web Speech API can only listen
+// in one language at a time, so the toggle is the user-facing switch.
+// After recognition, the transcript is still verified against both the
+// English dictionary and the Spanish verb list, so spoken English maps
+// to its Spanish translation and spoken Spanish conjugates directly.
 function pickSpeechLang() {
-  const sys = (navigator.language || 'en-US');
-  return sys; // e.g. 'en-US', 'es-MX', 'es-ES' — browser decides
+  if (typeof speechLang !== 'undefined' && speechLang) return speechLang;
+  return navigator.language || 'en-US';
 }
 function verifyAndApplyTranscript(raw) {
   const transcript = (raw || '').toLowerCase().replace(/[.,!?¿¡]/g, '').trim();
