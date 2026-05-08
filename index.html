@@ -3385,14 +3385,20 @@ function renderSuggestions() {
     const b = document.createElement('button');
     b.className = 'chip-btn';
     b.textContent = s;
-    // Don't blur the input when tapping a chip — its own click runs the search.
-    b.addEventListener('mousedown', (e) => e.preventDefault());
+    // Don't preventDefault on mousedown — letting the chip take focus is
+    // exactly what causes Android Chrome to dismiss the soft keyboard
+    // (programmatic .blur() alone doesn't always do it). The flag below
+    // tells the input's blur listener to skip its own search, so we don't
+    // double-conjugate with the user's pre-tap typed text.
+    b.addEventListener('pointerdown', () => { _chipTapInProgress = true; });
     b.addEventListener('click', () => {
       inputEl.value = s;
       clearBtn.classList.add('visible');
       hideAutocomplete();
       handleConjugate(s);
       renderSuggestions();
+      // Clear the flag a tick later so any in-flight blur event sees true.
+      setTimeout(() => { _chipTapInProgress = false; }, 50);
     });
     c.appendChild(b);
   });
@@ -3624,7 +3630,13 @@ inputEl.addEventListener('keydown', (e) => {
 });
 // Run the search when focus leaves the input — tap anywhere outside or
 // press Enter and whatever was typed up to that point gets conjugated.
+// _chipTapInProgress tells the blur listener to stand down briefly while
+// a chip's own click handler runs the search instead (so the chip's
+// natural focus-grab can dismiss the Android keyboard without us
+// double-conjugating with the user's pre-tap text).
+let _chipTapInProgress = false;
 inputEl.addEventListener('blur', () => {
+  if (_chipTapInProgress) return;
   if (inputEl.value.trim()) {
     handleConjugate();
     renderSuggestions();
