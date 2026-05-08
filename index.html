@@ -3385,29 +3385,44 @@ function renderSuggestions() {
     const b = document.createElement('button');
     b.className = 'chip-btn';
     b.textContent = s;
-    // Android Chrome keeps the keyboard up even after .blur() if it
-    // believes any nearby input is editable. The readonly trick forces
-    // the keyboard to dismiss: mark the input readonly, blur, then
-    // restore. The flag below tells the blur listener to stand down so
-    // we don't double-conjugate the pre-tap typed text.
-    b.addEventListener('pointerdown', () => {
+    // Android Chrome's keyboard is stubborn — it ignores plain .blur() and
+    // even readonly alone in some builds. We layer four techniques:
+    //   1. VirtualKeyboard API (Chrome 94+, the standards-track way)
+    //   2. inputmode="none" (declarative "no keyboard, please")
+    //   3. readonly attribute (input becomes non-editable)
+    //   4. .blur() (drop focus)
+    // At least one of these triggers the keyboard manager to dismiss on
+    // every Android Chrome we've tested. All four are reverted ~250ms
+    // later so the next time the user taps the input, the keyboard
+    // re-opens normally.
+    const fireDismiss = () => {
       _chipTapInProgress = true;
+      try {
+        if (navigator.virtualKeyboard && navigator.virtualKeyboard.hide) {
+          navigator.virtualKeyboard.hide();
+        }
+      } catch (e) {}
       if (document.activeElement === inputEl) {
+        inputEl.setAttribute('inputmode', 'none');
         inputEl.setAttribute('readonly', 'readonly');
         inputEl.blur();
       }
-    });
+    };
+    // pointerdown covers mouse + most touch; touchstart is a backstop
+    // for older Android Chromium that fires touchstart slightly differently.
+    b.addEventListener('pointerdown', fireDismiss);
+    b.addEventListener('touchstart', fireDismiss, { passive: true });
     b.addEventListener('click', () => {
       inputEl.value = s;
       clearBtn.classList.add('visible');
       hideAutocomplete();
       handleConjugate(s);
       renderSuggestions();
-      // Restore editability after a tick so the next focus reopens the keyboard.
       setTimeout(() => {
         inputEl.removeAttribute('readonly');
+        inputEl.removeAttribute('inputmode');
         _chipTapInProgress = false;
-      }, 150);
+      }, 250);
     });
     c.appendChild(b);
   });
