@@ -3385,20 +3385,29 @@ function renderSuggestions() {
     const b = document.createElement('button');
     b.className = 'chip-btn';
     b.textContent = s;
-    // Don't preventDefault on mousedown — letting the chip take focus is
-    // exactly what causes Android Chrome to dismiss the soft keyboard
-    // (programmatic .blur() alone doesn't always do it). The flag below
-    // tells the input's blur listener to skip its own search, so we don't
-    // double-conjugate with the user's pre-tap typed text.
-    b.addEventListener('pointerdown', () => { _chipTapInProgress = true; });
+    // Android Chrome keeps the keyboard up even after .blur() if it
+    // believes any nearby input is editable. The readonly trick forces
+    // the keyboard to dismiss: mark the input readonly, blur, then
+    // restore. The flag below tells the blur listener to stand down so
+    // we don't double-conjugate the pre-tap typed text.
+    b.addEventListener('pointerdown', () => {
+      _chipTapInProgress = true;
+      if (document.activeElement === inputEl) {
+        inputEl.setAttribute('readonly', 'readonly');
+        inputEl.blur();
+      }
+    });
     b.addEventListener('click', () => {
       inputEl.value = s;
       clearBtn.classList.add('visible');
       hideAutocomplete();
       handleConjugate(s);
       renderSuggestions();
-      // Clear the flag a tick later so any in-flight blur event sees true.
-      setTimeout(() => { _chipTapInProgress = false; }, 50);
+      // Restore editability after a tick so the next focus reopens the keyboard.
+      setTimeout(() => {
+        inputEl.removeAttribute('readonly');
+        _chipTapInProgress = false;
+      }, 150);
     });
     c.appendChild(b);
   });
