@@ -14,7 +14,7 @@
  *
  * Bump CACHE_VERSION whenever the shell changes; clients pick it up on next load.
  */
-const CACHE_VERSION = 'spanish-trainer-v18';
+const CACHE_VERSION = 'spanish-trainer-v19';
 const CACHE = CACHE_VERSION;
 
 const SHELL = [
