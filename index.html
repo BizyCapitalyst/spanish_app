@@ -640,6 +640,59 @@
     padding: 24px 0 8px;
     letter-spacing: 0.02em;
   }
+  /* Update chip in the header — shows the running version, becomes a
+     prominent green pill when a newer version.json is detected. */
+  .update-chip {
+    font-size: 10.5px;
+    font-weight: 500;
+    color: var(--text-dim);
+    background: var(--bg-tile);
+    border: 1px solid var(--border);
+    padding: 4px 10px;
+    border-radius: 999px;
+    letter-spacing: 0.04em;
+    cursor: pointer;
+    user-select: none;
+    flex-shrink: 0;
+    transition: all 0.15s;
+  }
+  .update-chip:active { opacity: 0.7; }
+  .update-chip.has-update {
+    background: rgba(52, 211, 153, 0.13);
+    color: var(--good);
+    border-color: var(--good);
+    letter-spacing: 0;
+    animation: chip-pulse 1.6s ease-in-out infinite;
+  }
+  @keyframes chip-pulse {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(52, 211, 153, 0); }
+    50%      { box-shadow: 0 0 0 5px rgba(52, 211, 153, 0.18); }
+  }
+  /* Version footer with the manual "Check for updates" button. */
+  .version-footer {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+  .check-btn {
+    background: var(--bg-tile);
+    border: 1px solid var(--border);
+    color: var(--text-mid);
+    padding: 5px 12px;
+    border-radius: 8px;
+    font-size: 11px;
+    font-weight: 500;
+    cursor: pointer;
+    font-family: inherit;
+    letter-spacing: 0.02em;
+    transition: all 0.15s;
+  }
+  .check-btn:hover, .check-btn:active {
+    color: var(--text);
+    border-color: var(--text-dim);
+  }
 
   /* DESKTOP TWEAKS */
   @media (min-width: 600px) {
@@ -674,6 +727,7 @@
         <div class="sub">Verb conjugation · vosotros excluded</div>
       </div>
     </div>
+    <span class="update-chip" id="updateChip" title="Tap to check for updates">v…</span>
   </header>
 
   <nav>
@@ -743,8 +797,9 @@
     Enter an English verb above to see conjugation tiles.
   </div>
 
-  <footer>
-    Lives offline · save to home screen on Android
+  <footer class="version-footer">
+    <span>Lives offline · save to home screen on Android</span>
+    <button id="updateBtn" class="check-btn" type="button">Check for updates</button>
   </footer>
 </div>
 
@@ -3862,10 +3917,91 @@ handleConjugate('be');
 
 // PWA service worker registration — caches the app shell so it works
 // offline after the first load. No-ops on browsers that don't support it.
+let _swReg = null;
 if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
-    navigator.serviceWorker.register('service-worker.js').catch(() => {});
+  window.addEventListener('load', async () => {
+    try { _swReg = await navigator.serviceWorker.register('service-worker.js'); }
+    catch (e) {}
   });
+}
+
+//=================================================================
+// Version + update chip — pattern lifted from the Offline Audio Player.
+// On load we silently fetch version.json from the GitHub repo (no SW
+// cache, bypasses HTTP cache) and compare to APP_VERSION below. If
+// newer, the header chip turns green and clicking it (or the footer
+// button) reloads with a fresh service-worker fetch.
+//=================================================================
+const APP_VERSION = '1.0.0';
+const VERSION_URL = 'https://raw.githubusercontent.com/BizyCapitalyst/spanish-trainer/master/version.json';
+
+const updateChip = document.getElementById('updateChip');
+const updateBtn  = document.getElementById('updateBtn');
+if (updateChip) updateChip.textContent = 'v' + APP_VERSION;
+
+function compareVersions(a, b) {
+  const pa = String(a).split('.').map(n => parseInt(n, 10) || 0);
+  const pb = String(b).split('.').map(n => parseInt(n, 10) || 0);
+  for (let i = 0; i < Math.max(pa.length, pb.length); i++) {
+    const x = pa[i] || 0, y = pb[i] || 0;
+    if (x !== y) return x < y ? -1 : 1;
+  }
+  return 0;
+}
+
+async function checkForUpdate(silent) {
+  if (!silent && updateBtn) updateBtn.textContent = 'Checking…';
+  try {
+    const r = await fetch(VERSION_URL, { cache: 'no-store' });
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    const j = await r.json();
+    if (j && j.version && compareVersions(APP_VERSION, j.version) < 0) {
+      if (updateChip) {
+        updateChip.textContent = 'update → v' + j.version;
+        updateChip.classList.add('has-update');
+        updateChip.title = 'Tap to install v' + j.version;
+        updateChip.onclick = applyUpdate;
+      }
+      if (updateBtn) {
+        updateBtn.textContent = 'Update to v' + j.version;
+        updateBtn.onclick = applyUpdate;
+      }
+      return j.version;
+    }
+    if (!silent && updateBtn) updateBtn.textContent = 'Up to date';
+  } catch (e) {
+    if (!silent && updateBtn) updateBtn.textContent = 'Check failed (offline?)';
+  }
+  setTimeout(() => {
+    if (updateBtn && !(updateChip && updateChip.classList.contains('has-update'))) {
+      updateBtn.textContent = 'Check for updates';
+    }
+  }, 2500);
+  return null;
+}
+
+async function applyUpdate() {
+  if (_swReg) {
+    try { await _swReg.update(); } catch (e) {}
+  }
+  // Force a fresh fetch path — the new SW will take over on next load.
+  location.reload();
+}
+
+if (updateChip) {
+  updateChip.addEventListener('click', () => {
+    if (!updateChip.classList.contains('has-update')) checkForUpdate(false);
+  });
+}
+if (updateBtn) {
+  updateBtn.addEventListener('click', () => {
+    if (updateBtn.textContent.startsWith('Update to')) applyUpdate();
+    else checkForUpdate(false);
+  });
+}
+// Silent check on load — only on http(s); file:// can't reach raw.githubusercontent
+if (location.protocol.startsWith('http')) {
+  setTimeout(() => checkForUpdate(true), 1500);
 }
 </script>
 </body>
