@@ -1,5 +1,5 @@
 {
-  "version": "1.0.0",
+  "version": "1.0.1",
   "released": "2026-05-07",
-  "notes": "Initial versioned release with reflexive verbs, audio playback, ~1300-verb dictionary, conjugation-grid icon, and update-chip mechanism."
+  "notes": "Match the audio-player update mechanism: same-origin version.json with cache-bust, controllerchange-aware applyUpdate so the post-install reload no longer races the new service worker, network-first SW for shell, cache-first for static, version.json bypassed entirely."
 }
