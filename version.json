@@ -1,5 +1,5 @@
 {
-  "version": "1.0.2",
+  "version": "1.0.4",
   "released": "2026-05-09",
-  "notes": "Update flow synced with the audio-player app's pattern: same-origin ./version.json with cache-bust, controllerchange-aware applyUpdate so the post-install reload doesn't race the new service worker, network-first SW for shell, cache-first for static, version.json bypassed entirely. Chip text shortened to 'update vX.Y.Z' (no arrow) to match the audio-player chip style."
+  "notes": "Fix Android keyboard not reopening after a chip tap. The chip-tap dismissal trick sets readonly + inputmode='none' on the input to force the keyboard down, then clears them on a 250 ms timer. If you tapped the input within that window, Android decided 'no keyboard' at focus-time and never re-checked. Now any pointerdown / touchstart / mousedown on the input proactively clears those attributes before the focus event fires, so the keyboard reopens reliably."
 }

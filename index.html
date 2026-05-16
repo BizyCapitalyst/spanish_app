@@ -610,8 +610,8 @@
     text-align: right;
     display: block;
     margin-top: 2px;
-    font-size: 11px;
-    color: var(--text-dim);
+    font-size: 12px;
+    color: var(--text);
     font-style: italic;
     letter-spacing: 0;
   }
@@ -745,7 +745,7 @@
       <div class="card-actions" onclick="event.stopPropagation()">
         <button class="chip-btn" id="toggleAllOn">All</button>
         <button class="chip-btn" id="toggleAllOff">None</button>
-        <button class="chip-btn" id="presetCore">Core 4</button>
+        <button class="chip-btn" id="presetCore">Core 5</button>
       </div>
     </div>
     <div class="card-body" id="moodGroups"></div>
@@ -831,7 +831,7 @@ const TENSES = [
   { key: 'imperative_neg',         mood: 'Imperative',  label: 'Imperative (neg.)',    es: 'Imperativo negativo',            pronouns: PRONOUNS_IMP },
 ];
 
-const CORE_TENSES = ['present', 'preterite', 'imperfect', 'future'];
+const CORE_TENSES = ['present', 'preterite', 'imperfect', 'future', 'present_subj'];
 
 // Examples are built dynamically by buildExample(tenseKey, currentEnglishBase)
 // based on whichever verb the user searched. Default: 'make'.
@@ -3149,10 +3149,28 @@ function normalizeEnglish(s) {
   return s.trim().toLowerCase().replace(/^to\s+/, '');
 }
 
-// Returns { type: 'en'|'es', enBase, infinitives } or null.
-// 1. English dictionary key (e.g. "speak")
-// 2. Known Spanish conjugated form (e.g. "hablo", "fui", "comemos")
-// 3. Anything else ending in -ar/-er/-ir → treat as Spanish infinitive
+// Given a Spanish infinitive, find the English dict key that maps to it
+// so we can pick a sensible "I do / I made / I'm investing" example set
+// instead of always falling back to "I am / I was". This is the ONLY
+// place we do a Spanish→English lookup, and it never surfaces as a
+// visible "translation" label — it just picks the verb the English
+// example column inflects from.
+function findEnglishBaseFor(spanishInf) {
+  if (!spanishInf) return null;
+  for (const k of Object.keys(ENGLISH_TO_SPANISH)) {
+    const list = ENGLISH_TO_SPANISH[k];
+    if (list && list.includes(spanishInf)) return k;
+  }
+  return null;
+}
+
+// Returns { type, enBase, infinitives, tenses? } or null.
+//   type: 'en' | 'es'
+//   tenses: optional array of tense-keys this form appears in. When
+//           present, handleConjugate will filter the result tiles to
+//           just those tenses so typing a Spanish conjugated form
+//           shows only the matching tense tile(s), not every selected
+//           tense.
 function lookupVerb(input) {
   const key = normalizeEnglish(input);
   if (!key) return null;
@@ -3161,16 +3179,24 @@ function lookupVerb(input) {
   }
   // If the input is itself a known Spanish infinitive, use it directly.
   if (SPANISH_VERB_LIST.indexOf(key) !== -1) {
-    return { type: 'es', enBase: currentEnglishBase, infinitives: [key] };
+    return { type: 'es', enBase: findEnglishBaseFor(key) || currentEnglishBase, infinitives: [key] };
   }
-  // Conjugated form → resolve to one or more infinitives.
-  const formKey = FORM_TO_INFINITIVE[key] ? key : (FORM_TO_INFINITIVE[stripAccents(key)] ? stripAccents(key) : null);
+  // Conjugated form → resolve to one or more infinitives + their tenses.
+  const stripped = stripAccents(key);
+  const formKey = FORM_TO_INFINITIVE[key] ? key : (FORM_TO_INFINITIVE[stripped] ? stripped : null);
   if (formKey) {
-    return { type: 'es', enBase: currentEnglishBase, infinitives: FORM_TO_INFINITIVE[formKey].slice() };
+    const infinitives = FORM_TO_INFINITIVE[formKey].slice();
+    const tenses = (FORM_TO_TENSES[formKey] || []).slice();
+    return {
+      type: 'es',
+      enBase: findEnglishBaseFor(infinitives[0]) || currentEnglishBase,
+      infinitives,
+      tenses,
+    };
   }
   // Fallback: any -ar/-er/-ir shape → treat as a fresh Spanish infinitive.
   if (getEnding(key)) {
-    return { type: 'es', enBase: currentEnglishBase, infinitives: [key] };
+    return { type: 'es', enBase: findEnglishBaseFor(key) || currentEnglishBase, infinitives: [key] };
   }
   return null;
 }
@@ -3190,12 +3216,23 @@ function stripAccents(s) {
   return s.normalize('NFD').replace(/[̀-ͯ]/g, '');
 }
 
-// Build a reverse index: every conjugated single-word form → its infinitive(s).
-// Lets users type a conjugated form like "hablo" or "fueron" and still get
-// the base verb conjugated, while the typed form stays in the search bar.
-const FORM_TO_INFINITIVE = (() => {
-  const map = {};
+// Build two parallel reverse indexes:
+//   FORM_TO_INFINITIVE  — form → [infinitives that contain this form]
+//   FORM_TO_TENSES      — form → [tense keys this form appears in]
+// The tense index lets us filter the result tiles to just the tense(s) a
+// typed Spanish form belongs to, instead of dumping every selected tense.
+const FORM_TO_INFINITIVE = {};
+const FORM_TO_TENSES = {};
+(() => {
   const SIMPLE_TENSES = ['present','preterite','imperfect','future','conditional','present_subj','imperfect_subj','imperative_aff'];
+  function addInf(key, inf) {
+    if (!FORM_TO_INFINITIVE[key]) FORM_TO_INFINITIVE[key] = [];
+    if (!FORM_TO_INFINITIVE[key].includes(inf)) FORM_TO_INFINITIVE[key].push(inf);
+  }
+  function addTense(key, tense) {
+    if (!FORM_TO_TENSES[key]) FORM_TO_TENSES[key] = [];
+    if (!FORM_TO_TENSES[key].includes(tense)) FORM_TO_TENSES[key].push(tense);
+  }
   for (const inf of SPANISH_VERB_LIST) {
     let conj = null;
     try { conj = conjugate(inf); } catch (e) { continue; }
@@ -3209,16 +3246,15 @@ const FORM_TO_INFINITIVE = (() => {
         // "te has duchado", etc.) so compound non-reflexive doesn't bloat the index.
         if (form.indexOf(' ') !== -1 && !/^(me|te|se|nos)\s/.test(form)) continue;
         const k = stripAccents(form);
-        if (!map[k]) map[k] = [];
-        if (!map[k].includes(inf)) map[k].push(inf);
+        addInf(k, inf);
+        addTense(k, t);
         if (k !== form) {
-          if (!map[form]) map[form] = [];
-          if (!map[form].includes(inf)) map[form].push(inf);
+          addInf(form, inf);
+          addTense(form, t);
         }
       }
     }
   }
-  return map;
 })();
 
 // Returns true when the EN/ES toggle is in Spanish mode.
@@ -3501,8 +3537,15 @@ function renderTiles() {
 
   // When a filter is active (English-pair input), restrict tiles to the
   // single matching tense; otherwise honor the user's tense toggles.
+  // Filter precedence: explicit conjugateFilter (single tense from
+  // English-pair / English-conjugation parsers, OR list of tenses from
+  // a Spanish-form lookup) takes priority over the user's tense toggles.
+  // Falls back to the toggle set when no filter is active.
   const active = conjugateFilter
-    ? TENSES.filter(t => t.key === conjugateFilter.tense)
+    ? TENSES.filter(t =>
+        conjugateFilter.tenses
+          ? conjugateFilter.tenses.includes(t.key)
+          : t.key === conjugateFilter.tense)
     : TENSES.filter(t => toggles[t.key]);
 
   if (currentConjugations.length === 0) {
@@ -3655,9 +3698,21 @@ function handleConjugate(forced) {
     return;
   }
 
-  // Only update English base from English-side lookups; Spanish input
-  // keeps whatever English base was last shown.
-  if (lookup.type === 'en') currentEnglishBase = lookup.enBase || 'be';
+  // Pick the English base. English path uses its own key; Spanish path
+  // uses the reverse lookup helper that just picked the most natural
+  // English verb mapping to that Spanish infinitive (e.g. hacer → "do",
+  // hablar → "speak"). Either way, the English example column inflects
+  // from the right base.
+  currentEnglishBase = lookup.enBase || currentEnglishBase || 'be';
+
+  // If the lookup pinpointed which tense(s) the typed form belongs to,
+  // filter the tiles to just those tenses (pronoun toggles still apply
+  // inside each tile). Clear it otherwise.
+  if (lookup.tenses && lookup.tenses.length) {
+    conjugateFilter = { tenses: lookup.tenses.slice() };
+  } else {
+    conjugateFilter = null;
+  }
   currentConjugations = lookup.infinitives.map(inf => ({
     infinitive: inf,
     conjugations: conjugate(inf),
@@ -3694,6 +3749,21 @@ function handleConjugate(forced) {
 //=================================================================
 const inputEl = document.getElementById('verbInput');
 const clearBtn = document.getElementById('clearBtn');
+
+// When the user touches the input, clear any stale readonly / inputmode
+// attributes that a previous chip tap may have left on it. We need this
+// BEFORE Android Chrome's focus event fires, because the keyboard
+// manager makes its show/hide decision at focus-time and won't re-check
+// if those attributes flip a moment later. pointerdown / touchstart
+// both fire before focus on touch devices.
+function clearChipTapAttrs() {
+  if (inputEl.hasAttribute('readonly')) inputEl.removeAttribute('readonly');
+  if (inputEl.getAttribute('inputmode') === 'none') inputEl.removeAttribute('inputmode');
+  _chipTapInProgress = false;
+}
+inputEl.addEventListener('pointerdown', clearChipTapAttrs);
+inputEl.addEventListener('touchstart', clearChipTapAttrs, { passive: true });
+inputEl.addEventListener('mousedown', clearChipTapAttrs);
 
 inputEl.addEventListener('input', (e) => {
   const v = e.target.value;
@@ -3936,7 +4006,7 @@ if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
 // causing false "Up to date" responses right after a push. GitHub Pages
 // propagates pushes within ~1 minute.
 //=================================================================
-const APP_VERSION = '1.0.2';
+const APP_VERSION = '1.0.4';
 const VERSION_URL = './version.json';
 
 const updateChip = document.getElementById('updateChip');
