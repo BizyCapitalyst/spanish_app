@@ -31,6 +31,7 @@ jobs:
           cat conjugacion-build/source.tar.gz.b64.part-* | base64 --decode > work/source.tar.gz
           tar -xzf work/source.tar.gz -C work
           test -f work/conjugacion-diaria/settings.gradle.kts
+          echo "9e0cd077e8b1d85e08cb2a418f276734bcda3dc432d4580fa6848e8d44b030ba  work/source.tar.gz" | sha256sum -c -
           sha256sum work/source.tar.gz | tee work/source-archive.sha256
 
       - name: Set up JDK 17
@@ -43,8 +44,6 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '22'
-          cache: npm
-          cache-dependency-path: work/conjugacion-diaria/package.json
 
       - name: Set up Python
         uses: actions/setup-python@v5
