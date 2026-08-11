@@ -1,0 +1,167 @@
+name: Build Conjugacion Diaria release fixed
+
+on:
+  push:
+    branches: [conjugacion-diaria-build-20260809]
+    paths:
+      - '.github/workflows/conjugacion-build-fixed.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - name: Check out build branch
+        uses: actions/checkout@v4
+        with:
+          ref: conjugacion-diaria-build-20260809
+
+      - name: Reconstruct and patch source archive
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p work
+          cat \
+            conjugacion-build/source.tar.gz.b64.part-000 \
+            conjugacion-build/source.tar.gz.b64.part-001a \
+            conjugacion-build/source.tar.gz.b64.part-001b \
+            conjugacion-build/source.tar.gz.b64.part-001c \
+            conjugacion-build/source.tar.gz.b64.part-002 \
+            conjugacion-build/source.tar.gz.b64.part-003 \
+            conjugacion-build/source.tar.gz.b64.part-004 \
+            conjugacion-build/source.tar.gz.b64.part-005 \
+            | base64 --decode > work/source.tar.gz
+          echo "9e0cd077e8b1d85e08cb2a418f276734bcda3dc432d4580fa6848e8d44b030ba  work/source.tar.gz" | sha256sum -c -
+          tar -xzf work/source.tar.gz -C work
+          test -f work/conjugacion_diaria/settings.gradle.kts
+          python conjugacion-build/apply-generator-fix.py work/conjugacion_diaria
+          node --check work/conjugacion_diaria/tools/generate_paradigms.js
+          python -m py_compile work/conjugacion_diaria/tools/generate_library.py
+          sha256sum work/source.tar.gz | tee work/source-archive.sha256
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android platform and build tools
+        shell: bash
+        run: |
+          set -euo pipefail
+          yes | sdkmanager --licenses >/dev/null || true
+          sdkmanager "platforms;android-36" "build-tools;36.0.0" "platform-tools"
+
+      - name: Set up Gradle 8.13
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.13'
+
+      - name: Generate and validate comprehensive verb library
+        working-directory: work/conjugacion_diaria
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm install --no-audit --no-fund
+          python tools/generate_library.py --refresh
+          python - <<'PY'
+          import json
+          report = json.load(open('data/library_validation.json', encoding='utf-8'))
+          assert report['passed']
+          assert report['verbCount'] >= 2000
+          assert report['duplicateCount'] == 0
+          print(json.dumps(report, ensure_ascii=False, indent=2))
+          PY
+
+      - name: Create Gradle wrapper
+        working-directory: work/conjugacion_diaria
+        run: gradle wrapper --gradle-version 8.13 --distribution-type bin
+
+      - name: Run automated tests and assemble unsigned release
+        working-directory: work/conjugacion_diaria
+        shell: bash
+        run: |
+          set -euo pipefail
+          ./gradlew --no-daemon --stacktrace clean testReleaseUnitTest assembleRelease
+
+      - name: Create source ZIP with generated library
+        working-directory: work/conjugacion_diaria
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf .gradle app/build build node_modules .cache
+          find . -name '*.class' -delete
+          zip -r -9 ../Conjugacion-Diaria-1.0.0-source.zip . \
+            -x '*.git*' '**/.DS_Store' '**/__pycache__/*' '*.pyc'
+
+      - name: Verify source ZIP builds independently
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p independent
+          unzip -q work/Conjugacion-Diaria-1.0.0-source.zip -d independent
+          cd independent
+          ./gradlew --no-daemon --stacktrace testReleaseUnitTest assembleRelease
+
+      - name: Align and inspect APK
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p deliverables/reports deliverables/signing-tools
+          BT="$ANDROID_HOME/build-tools/36.0.0"
+          APK="independent/app/build/outputs/apk/release/app-release-unsigned.apk"
+          "$BT/zipalign" -f -p 4 "$APK" deliverables/Conjugacion-Diaria-1.0.0-aligned-unsigned.apk
+          "$BT/zipalign" -c -P 16 -v 4 deliverables/Conjugacion-Diaria-1.0.0-aligned-unsigned.apk | tee deliverables/reports/zipalign-unsigned.txt
+          "$BT/aapt" dump badging deliverables/Conjugacion-Diaria-1.0.0-aligned-unsigned.apk | tee deliverables/reports/apk-badging.txt
+          grep -q "package: name='com.james.conjugaciondiaria' versionCode='1' versionName='1.0.0'" deliverables/reports/apk-badging.txt
+          grep -q "sdkVersion:'26'" deliverables/reports/apk-badging.txt
+          grep -q "targetSdkVersion:'36'" deliverables/reports/apk-badging.txt
+          cp "$BT/lib/apksigner.jar" deliverables/signing-tools/
+          cp "$BT/zipalign" deliverables/signing-tools/
+          ldd "$BT/zipalign" | tee deliverables/signing-tools/zipalign-ldd.txt || true
+          cp -a "$BT/lib64" deliverables/signing-tools/ 2>/dev/null || true
+
+      - name: Collect deliverables and reports
+        shell: bash
+        run: |
+          set -euo pipefail
+          cp work/Conjugacion-Diaria-1.0.0-source.zip deliverables/
+          cp work/conjugacion_diaria/data/verb_library.json deliverables/
+          cp work/conjugacion_diaria/data/verb_list.csv deliverables/
+          cp work/conjugacion_diaria/data/verb_import_template.csv deliverables/
+          cp work/conjugacion_diaria/data/full_paradigm_import_example.json deliverables/
+          cp work/conjugacion_diaria/data/library_validation.json deliverables/reports/
+          cp -r work/conjugacion_diaria/docs deliverables/
+          cp -r independent/app/build/reports/tests deliverables/reports/unit-tests
+          cp -r independent/app/schemas deliverables/reports/room-schemas
+          gradle --version > deliverables/reports/gradle-version.txt
+          java -version > deliverables/reports/java-version.txt 2>&1
+          python --version > deliverables/reports/python-version.txt
+          node --version > deliverables/reports/node-version.txt
+          (cd deliverables && sha256sum Conjugacion-Diaria-1.0.0-aligned-unsigned.apk Conjugacion-Diaria-1.0.0-source.zip verb_library.json verb_list.csv verb_import_template.csv full_paradigm_import_example.json > SHA256SUMS-UNSIGNED.txt)
+          find deliverables -maxdepth 3 -type f -printf '%s %p\n' | sort -n > deliverables/reports/file-inventory.txt
+
+      - name: Upload release build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: conjugacion-diaria-build-1.0.0-fixed
+          path: deliverables
+          if-no-files-found: error
+          retention-days: 7
