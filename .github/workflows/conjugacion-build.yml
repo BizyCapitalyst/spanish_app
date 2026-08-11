@@ -28,7 +28,16 @@ jobs:
           test -f conjugacion-build/complete.flag
           test "$(cat conjugacion-build/complete.flag)" = "READY-2"
           mkdir -p work
-          cat conjugacion-build/source.tar.gz.b64.part-* | base64 --decode > work/source.tar.gz
+          cat \
+            conjugacion-build/source.tar.gz.b64.part-000 \
+            conjugacion-build/source.tar.gz.b64.part-001a \
+            conjugacion-build/source.tar.gz.b64.part-001b \
+            conjugacion-build/source.tar.gz.b64.part-001c \
+            conjugacion-build/source.tar.gz.b64.part-002 \
+            conjugacion-build/source.tar.gz.b64.part-003 \
+            conjugacion-build/source.tar.gz.b64.part-004 \
+            conjugacion-build/source.tar.gz.b64.part-005 \
+            | base64 --decode > work/source.tar.gz
           tar -xzf work/source.tar.gz -C work
           test -f work/conjugacion-diaria/settings.gradle.kts
           echo "9e0cd077e8b1d85e08cb2a418f276734bcda3dc432d4580fa6848e8d44b030ba  work/source.tar.gz" | sha256sum -c -
