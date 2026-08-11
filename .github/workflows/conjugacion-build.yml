@@ -39,7 +39,7 @@ jobs:
             conjugacion-build/source.tar.gz.b64.part-005 \
             | base64 --decode > work/source.tar.gz
           tar -xzf work/source.tar.gz -C work
-          test -f work/conjugacion-diaria/settings.gradle.kts
+          test -f work/conjugacion_diaria/settings.gradle.kts
           echo "9e0cd077e8b1d85e08cb2a418f276734bcda3dc432d4580fa6848e8d44b030ba  work/source.tar.gz" | sha256sum -c -
           sha256sum work/source.tar.gz | tee work/source-archive.sha256
 
@@ -74,7 +74,7 @@ jobs:
           gradle-version: '8.13'
 
       - name: Generate and validate comprehensive verb library
-        working-directory: work/conjugacion-diaria
+        working-directory: work/conjugacion_diaria
         shell: bash
         run: |
           set -euo pipefail
@@ -88,18 +88,18 @@ jobs:
           PY
 
       - name: Create Gradle wrapper
-        working-directory: work/conjugacion-diaria
+        working-directory: work/conjugacion_diaria
         run: gradle wrapper --gradle-version 8.13 --distribution-type bin
 
       - name: Run automated tests and assemble unsigned release
-        working-directory: work/conjugacion-diaria
+        working-directory: work/conjugacion_diaria
         shell: bash
         run: |
           set -euo pipefail
           ./gradlew --no-daemon --stacktrace clean testReleaseUnitTest assembleRelease
 
       - name: Create source ZIP with generated library
-        working-directory: work/conjugacion-diaria
+        working-directory: work/conjugacion_diaria
         shell: bash
         run: |
           set -euo pipefail
@@ -140,12 +140,12 @@ jobs:
         run: |
           set -euo pipefail
           cp work/Conjugacion-Diaria-1.0.0-source.zip deliverables/
-          cp work/conjugacion-diaria/data/verb_library.json deliverables/
-          cp work/conjugacion-diaria/data/verb_list.csv deliverables/
-          cp work/conjugacion-diaria/data/verb_import_template.csv deliverables/
-          cp work/conjugacion-diaria/data/full_paradigm_import_example.json deliverables/
-          cp work/conjugacion-diaria/data/library_validation.json deliverables/reports/
-          cp -r work/conjugacion-diaria/docs deliverables/
+          cp work/conjugacion_diaria/data/verb_library.json deliverables/
+          cp work/conjugacion_diaria/data/verb_list.csv deliverables/
+          cp work/conjugacion_diaria/data/verb_import_template.csv deliverables/
+          cp work/conjugacion_diaria/data/full_paradigm_import_example.json deliverables/
+          cp work/conjugacion_diaria/data/library_validation.json deliverables/reports/
+          cp -r work/conjugacion_diaria/docs deliverables/
           cp -r independent/app/build/reports/tests deliverables/reports/unit-tests
           cp -r independent/app/schemas deliverables/reports/room-schemas
           gradle --version > deliverables/reports/gradle-version.txt
