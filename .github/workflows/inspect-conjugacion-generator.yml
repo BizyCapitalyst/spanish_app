@@ -1,0 +1,55 @@
+name: Inspect Conjugacion Diaria generator
+
+on:
+  push:
+    branches: [conjugacion-diaria-build-20260809]
+    paths:
+      - '.github/workflows/inspect-conjugacion-generator.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: conjugacion-diaria-build-20260809
+      - name: Reconstruct and inspect generator
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p work
+          cat \
+            conjugacion-build/source.tar.gz.b64.part-000 \
+            conjugacion-build/source.tar.gz.b64.part-001a \
+            conjugacion-build/source.tar.gz.b64.part-001b \
+            conjugacion-build/source.tar.gz.b64.part-001c \
+            conjugacion-build/source.tar.gz.b64.part-002 \
+            conjugacion-build/source.tar.gz.b64.part-003 \
+            conjugacion-build/source.tar.gz.b64.part-004 \
+            conjugacion-build/source.tar.gz.b64.part-005 \
+            | base64 --decode > work/source.tar.gz
+          tar -xzf work/source.tar.gz -C work
+          python - <<'PY'
+          from pathlib import Path
+          p=Path('work/conjugacion_diaria/tools/generate_library.py')
+          lines=p.read_text(encoding='utf-8').splitlines()
+          terms=('required','candidate','seed','levant','must_include','core_verbs','special')
+          hits=[]
+          for i,line in enumerate(lines):
+              if any(t in line.lower() for t in terms):
+                  hits.append(i)
+          emitted=set()
+          for i in hits:
+              a=max(0,i-8); b=min(len(lines),i+14)
+              key=(a,b)
+              if any(a>=x and b<=y for x,y in emitted):
+                  continue
+              emitted.add(key)
+              print(f'--- LINES {a+1}-{b} ---')
+              for n in range(a,b):
+                  print(f'{n+1:04d}: {lines[n]}')
+          PY
