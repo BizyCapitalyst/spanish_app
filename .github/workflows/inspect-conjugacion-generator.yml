@@ -1,4 +1,4 @@
-name: Inspect Conjugacion Diaria build script
+name: Inspect Conjugacion Diaria Kotlin sources
 
 on:
   push:
@@ -17,7 +17,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           ref: conjugacion-diaria-build-20260809
-      - name: Reconstruct and print build script
+      - name: Reconstruct and print Kotlin error context
         shell: bash
         run: |
           set -euo pipefail
@@ -33,10 +33,14 @@ jobs:
             conjugacion-build/source.tar.gz.b64.part-005 \
             | base64 --decode > work/source.tar.gz
           tar -xzf work/source.tar.gz -C work
-          echo '--- app/build.gradle.kts ---'
-          nl -ba work/conjugacion_diaria/app/build.gradle.kts
-          echo '--- root build.gradle.kts ---'
-          nl -ba work/conjugacion_diaria/build.gradle.kts
-          echo '--- gradle properties and versions ---'
-          cat work/conjugacion_diaria/gradle.properties || true
-          find work/conjugacion_diaria/gradle -maxdepth 2 -type f -print -exec cat {} \; 2>/dev/null || true
+          SRC=work/conjugacion_diaria/app/src/main/java/com/james/conjugaciondiaria
+          echo '--- HomeBuilderScreens.kt 1-80 ---'
+          nl -ba "$SRC/HomeBuilderScreens.kt" | sed -n '1,80p'
+          echo '--- PracticeScreen.kt 1-90 ---'
+          nl -ba "$SRC/PracticeScreen.kt" | sed -n '1,90p'
+          echo '--- ManagementScreens.kt 1-470 ---'
+          nl -ba "$SRC/ManagementScreens.kt" | sed -n '1,470p'
+          echo '--- Repository.kt 150-235 ---'
+          nl -ba "$SRC/Repository.kt" | sed -n '150,235p'
+          echo '--- Relevant helper declarations ---'
+          grep -R -n -E 'fun .*Chip|fun .*Toggle|onToggle|FilterChip|ChoiceChip|ToggleChip|SelectableChip' "$SRC" || true
