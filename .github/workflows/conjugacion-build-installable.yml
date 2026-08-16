@@ -39,6 +39,7 @@ jobs:
           tar -xzf work/source.tar.gz -C work
           test -f work/conjugacion_diaria/settings.gradle.kts
           python conjugacion-build/apply-generator-fix.py work/conjugacion_diaria
+          python conjugacion-build/apply-levantarse-seed-fix.py work/conjugacion_diaria
           sed -E -i 's/compileSdk = [0-9]+/compileSdk = 36/' work/conjugacion_diaria/app/build.gradle.kts
           sed -E -i 's/targetSdk = [0-9]+/targetSdk = 36/' work/conjugacion_diaria/app/build.gradle.kts
           grep -q 'compileSdk = 36' work/conjugacion_diaria/app/build.gradle.kts
