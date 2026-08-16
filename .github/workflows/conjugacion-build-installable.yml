@@ -40,10 +40,13 @@ jobs:
           test -f work/conjugacion_diaria/settings.gradle.kts
           python conjugacion-build/apply-generator-fix.py work/conjugacion_diaria
           python conjugacion-build/apply-levantarse-seed-fix.py work/conjugacion_diaria
+          python conjugacion-build/apply-kotlin-dsl-fix.py work/conjugacion_diaria
           sed -E -i 's/compileSdk = [0-9]+/compileSdk = 36/' work/conjugacion_diaria/app/build.gradle.kts
           sed -E -i 's/targetSdk = [0-9]+/targetSdk = 36/' work/conjugacion_diaria/app/build.gradle.kts
           grep -q 'compileSdk = 36' work/conjugacion_diaria/app/build.gradle.kts
           grep -q 'targetSdk = 36' work/conjugacion_diaria/app/build.gradle.kts
+          grep -q 'JvmTarget.JVM_17' work/conjugacion_diaria/app/build.gradle.kts
+          ! grep -q 'applicationIdSuffix' work/conjugacion_diaria/app/build.gradle.kts
           node --check work/conjugacion_diaria/tools/generate_paradigms.js
           python -m py_compile work/conjugacion_diaria/tools/generate_library.py
 
