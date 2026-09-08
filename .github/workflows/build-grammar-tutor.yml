@@ -34,6 +34,24 @@ jobs:
           test -f "$APK"
           "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --verbose "$APK"
           "$ANDROID_HOME/build-tools/35.0.0/aapt2" dump badging "$APK" | head -20
+      - name: Emulator launch smoke test
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 29
+          arch: x86_64
+          profile: pixel_2
+          disable-animations: true
+          script: |
+            adb install -r android_grammar_tutor/app/build/outputs/apk/debug/app-debug.apk
+            adb logcat -c
+            adb shell am start -W -n com.james.gramaticaconversacional/.MainActivity
+            sleep 5
+            PID=$(adb shell pidof com.james.gramaticaconversacional | tr -d '\r')
+            test -n "$PID"
+            if adb logcat -d -v brief | grep -E 'FATAL EXCEPTION|Process: com.james.gramaticaconversacional' ; then
+              exit 1
+            fi
+            echo "Launch smoke test PASS; pid=$PID"
       - name: Rename APK
         run: cp android_grammar_tutor/app/build/outputs/apk/debug/app-debug.apk "Gramatica Conversacional 2.0.0.apk"
       - uses: actions/upload-artifact@v4
