@@ -23,9 +23,17 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '8.9'
+      - name: Apply source compatibility fix
+        run: sed -i 's/b.setTextAllCaps(false); //g' android_grammar_tutor/app/src/main/java/com/james/gramaticaconversacional/MainActivity.java
       - name: Build debug APK
         working-directory: android_grammar_tutor
         run: gradle :app:assembleDebug --no-daemon
+      - name: Verify APK package
+        run: |
+          APK=android_grammar_tutor/app/build/outputs/apk/debug/app-debug.apk
+          test -f "$APK"
+          "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --verbose "$APK"
+          "$ANDROID_HOME/build-tools/35.0.0/aapt2" dump badging "$APK" | head -20
       - name: Rename APK
         run: cp android_grammar_tutor/app/build/outputs/apk/debug/app-debug.apk "Gramatica Conversacional 2.0.0.apk"
       - uses: actions/upload-artifact@v4
