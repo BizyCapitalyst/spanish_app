@@ -34,7 +34,7 @@ jobs:
           test -f "$APK"
           "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --verbose "$APK"
           "$ANDROID_HOME/build-tools/35.0.0/aapt2" dump badging "$APK" | head -20
-      - name: Emulator launch smoke test
+      - name: Emulator launch diagnostic
         uses: reactivecircus/android-emulator-runner@v2
         with:
           api-level: 29
@@ -42,13 +42,23 @@ jobs:
           profile: pixel_2
           disable-animations: true
           script: |
-            adb install -r android_grammar_tutor/app/build/outputs/apk/debug/app-debug.apk
+            set +e
+            APK=android_grammar_tutor/app/build/outputs/apk/debug/app-debug.apk
+            adb install -r "$APK"
             adb logcat -c
             adb shell am start -W -n com.james.gramaticaconversacional/.MainActivity
-            sleep 5
+            sleep 7
             PID=$(adb shell pidof com.james.gramaticaconversacional | tr -d '\r')
-            test -n "$PID"
-            if adb logcat -d -v brief | grep -E 'FATAL EXCEPTION|Process: com.james.gramaticaconversacional' ; then
+            adb logcat -d -v threadtime > /tmp/grammar-logcat.txt
+            echo "PID=$PID"
+            echo '--- grammar process / fatal log ---'
+            grep -Ei -C 12 'FATAL EXCEPTION|AndroidRuntime|com.james.gramaticaconversacional|Process: com.james.gramaticaconversacional' /tmp/grammar-logcat.txt | tail -250
+            if [ -z "$PID" ]; then
+              echo 'APP_PROCESS_DIED'
+              exit 1
+            fi
+            if grep -E 'FATAL EXCEPTION.*|Process: com.james.gramaticaconversacional' /tmp/grammar-logcat.txt; then
+              echo 'FATAL_EXCEPTION_DETECTED'
               exit 1
             fi
             echo "Launch smoke test PASS; pid=$PID"
