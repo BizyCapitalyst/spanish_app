@@ -47,10 +47,10 @@ jobs:
           script: bash scripts/android-emulator-smoke-test.sh android_grammar_tutor/app/build/outputs/apk/debug/app-debug.apk com.james.gramaticaconversacional .MainActivity 7
 
       - name: Rename exact passing APK
-        run: cp android_grammar_tutor/app/build/outputs/apk/debug/app-debug.apk "Gramatica Conversacional 2.1.0.apk"
+        run: cp android_grammar_tutor/app/build/outputs/apk/debug/app-debug.apk "Gramatica Conversacional 2.1.1.apk"
 
       - uses: actions/upload-artifact@v4
         with:
-          name: Gramatica-Conversacional-2.1.0
-          path: Gramatica Conversacional 2.1.0.apk
+          name: Gramatica-Conversacional-2.1.1
+          path: Gramatica Conversacional 2.1.1.apk
           if-no-files-found: error

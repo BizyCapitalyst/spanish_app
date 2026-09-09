@@ -39,15 +39,21 @@ public final class MainActivity extends Activity implements TextToSpeech.OnInitL
 
     private final Handler handler = new Handler(Looper.getMainLooper());
     private final ArrayDeque<Integer> weakPrompts = new ArrayDeque<>();
+    private final StringBuilder answerBuffer = new StringBuilder();
+
     private SharedPreferences prefs;
     private TextToSpeech tts;
     private SpeechRecognizer recognizer;
     private Intent speechIntent;
+
     private boolean ttsReady = false;
     private boolean speechAvailable = false;
     private boolean sessionActive = false;
     private boolean listening = false;
     private boolean pendingSessionStart = false;
+    private boolean answerCaptureActive = false;
+    private boolean answerFinishing = false;
+
     private int promptCursor = 0;
     private int sessionTurns = 0;
     private int sessionCorrections = 0;
@@ -56,7 +62,12 @@ public final class MainActivity extends Activity implements TextToSpeech.OnInitL
     private int sessionTarget = 0;
     private int sessionNatural = 0;
     private int recognitionErrors = 0;
+    private int captureGeneration = 0;
+
+    private String lastPartial = "";
+    private String lastCommittedChunk = "";
     private TutorContent.Prompt currentPrompt;
+
     private TextView statusText;
     private TextView fallbackQuestion;
     private LinearLayout correctionList;
@@ -161,8 +172,7 @@ public final class MainActivity extends Activity implements TextToSpeech.OnInitL
         root.addView(focus);
 
         addSpacer(root, 18);
-        TextView languageRule = text("Questions are in Spanish. Grammar explanations and learning instructions are in English.", 14, MUTED);
-        root.addView(languageRule);
+        root.addView(text("Questions are in Spanish. Grammar explanations and learning instructions are in English.", 14, MUTED));
 
         int lastTurns = prefs.getInt("last_turns", 0);
         if (lastTurns > 0) {
@@ -185,8 +195,9 @@ public final class MainActivity extends Activity implements TextToSpeech.OnInitL
         root.addView(start);
 
         addSpacer(root, 12);
-        TextView help = text("During the session the screen clears. Correct answers leave it clear; only meaningful corrections remain visible until you end the conversation.", 13, MUTED);
-        root.addView(help);
+        root.addView(text(
+            "During each spoken answer, pause as often as you need. The tutor keeps the answer open until you press Finish Answer. Correct answers leave the session screen clear; only meaningful corrections remain visible.",
+            13, MUTED));
 
         setContentView(scrollWith(root));
     }
@@ -226,8 +237,11 @@ public final class MainActivity extends Activity implements TextToSpeech.OnInitL
         controls.setOrientation(LinearLayout.HORIZONTAL);
         Button repeat = button("Repeat question");
         repeat.setOnClickListener(v -> repeatQuestion());
-        micButton = button("Answer now");
-        micButton.setOnClickListener(v -> listen());
+        micButton = button("Start Answer");
+        micButton.setOnClickListener(v -> {
+            if (answerCaptureActive) finishAnswerCapture();
+            else if (!answerFinishing) beginAnswerCapture();
+        });
         controls.addView(repeat, new LinearLayout.LayoutParams(0, dp(50), 1f));
         LinearLayout.LayoutParams micParams = new LinearLayout.LayoutParams(0, dp(50), 1f);
         micParams.setMargins(dp(8), 0, 0, 0);
@@ -272,7 +286,9 @@ public final class MainActivity extends Activity implements TextToSpeech.OnInitL
         buildSessionScreen();
 
         if (ttsReady) {
-            speakEnglish("Conversation started. I will ask questions in Spanish. Answer naturally in Spanish. If I hear a meaningful error, I will put the correction and the English explanation on the screen.", "SESSION_INTRO");
+            speakEnglish(
+                "Conversation started. I will ask questions in Spanish. Answer naturally in Spanish. Pause whenever you need to think. I will keep listening across pauses and will not submit your answer until you press Finish Answer. Meaningful corrections will appear on the screen with explanations in English.",
+                "SESSION_INTRO");
         } else {
             pendingSessionStart = true;
             statusText.setText("Preparing voice…");
@@ -306,6 +322,7 @@ public final class MainActivity extends Activity implements TextToSpeech.OnInitL
 
     private void nextQuestion() {
         if (!sessionActive) return;
+        stopListening();
         int index;
         if (!weakPrompts.isEmpty() && sessionTurns > 0 && sessionTurns % 3 == 0) {
             index = weakPrompts.removeFirst();
@@ -415,35 +432,89 @@ public final class MainActivity extends Activity implements TextToSpeech.OnInitL
             speechIntent.putExtra(RecognizerIntent.EXTRA_LANGUAGE, "es-PA");
             speechIntent.putExtra(RecognizerIntent.EXTRA_LANGUAGE_PREFERENCE, "es-PA");
             speechIntent.putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 3);
-            speechIntent.putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, false);
+            speechIntent.putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, true);
+            speechIntent.putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_COMPLETE_SILENCE_LENGTH_MILLIS, 5000L);
+            speechIntent.putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_POSSIBLY_COMPLETE_SILENCE_LENGTH_MILLIS, 3000L);
+
             recognizer.setRecognitionListener(new RecognitionListener() {
                 public void onReadyForSpeech(Bundle params) {
                     listening = true;
                     recognitionErrors = 0;
-                    if (statusText != null) statusText.setText("Listening…");
-                    if (micButton != null) micButton.setText("Listening…");
+                    if (statusText != null && answerCaptureActive) {
+                        statusText.setText("Listening — pause as needed. Press Finish Answer when you are done.");
+                    }
+                    updateMicButton();
                 }
                 public void onBeginningOfSpeech() {}
                 public void onRmsChanged(float rmsdB) {}
                 public void onBufferReceived(byte[] buffer) {}
-                public void onEndOfSpeech() { if (statusText != null) statusText.setText("Checking your Spanish…"); }
+                public void onEndOfSpeech() {
+                    if (statusText != null && answerCaptureActive && !answerFinishing) {
+                        statusText.setText("Pause detected — your answer is still open.");
+                    }
+                }
                 public void onError(int error) {
                     listening = false;
+                    if (!lastPartial.isEmpty()) {
+                        appendChunk(lastPartial);
+                        lastPartial = "";
+                    }
+
+                    if (answerFinishing) {
+                        finalizeAnswerCapture();
+                        return;
+                    }
+                    if (!answerCaptureActive) {
+                        updateMicButton();
+                        return;
+                    }
+
+                    if (error == SpeechRecognizer.ERROR_NO_MATCH || error == SpeechRecognizer.ERROR_SPEECH_TIMEOUT) {
+                        if (statusText != null) {
+                            statusText.setText("Still waiting — take your time. Press Finish Answer when done.");
+                        }
+                        scheduleRecognitionRestart(250);
+                        return;
+                    }
+
                     recognitionErrors++;
-                    if (micButton != null) micButton.setText("Answer now");
-                    if (statusText != null) statusText.setText("I did not get a clear answer. Try again or type it.");
-                    if (recognitionErrors >= 2) showTypedFallback();
+                    if (recognitionErrors >= 3) {
+                        answerCaptureActive = false;
+                        captureGeneration++;
+                        updateMicButton();
+                        showTypedFallback();
+                        if (statusText != null) {
+                            statusText.setText("The speech service had repeated errors. Press Start Answer to retry or type your answer.");
+                        }
+                    } else {
+                        if (statusText != null) {
+                            statusText.setText("Reconnecting the microphone — your captured answer is still open.");
+                        }
+                        scheduleRecognitionRestart(600);
+                    }
                 }
                 public void onResults(Bundle results) {
                     listening = false;
-                    if (micButton != null) micButton.setText("Answer now");
                     ArrayList<String> matches = results.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION);
-                    if (matches != null && !matches.isEmpty()) handleAnswer(matches.get(0));
-                    else {
-                        if (statusText != null) statusText.setText("I did not catch that. Try again.");
+                    if (matches != null && !matches.isEmpty()) appendChunk(matches.get(0));
+                    lastPartial = "";
+                    recognitionErrors = 0;
+
+                    if (answerFinishing) {
+                        finalizeAnswerCapture();
+                    } else if (answerCaptureActive) {
+                        if (statusText != null) {
+                            statusText.setText("Pause captured — continue speaking when ready, or press Finish Answer.");
+                        }
+                        scheduleRecognitionRestart(300);
+                    } else {
+                        updateMicButton();
                     }
                 }
-                public void onPartialResults(Bundle partialResults) {}
+                public void onPartialResults(Bundle partialResults) {
+                    ArrayList<String> matches = partialResults.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION);
+                    lastPartial = (matches != null && !matches.isEmpty()) ? matches.get(0).trim() : "";
+                }
                 public void onEvent(int eventType, Bundle params) {}
             });
         } catch (Exception ignored) {
@@ -452,8 +523,8 @@ public final class MainActivity extends Activity implements TextToSpeech.OnInitL
         }
     }
 
-    private void listen() {
-        if (!sessionActive) return;
+    private void beginAnswerCapture() {
+        if (!sessionActive || answerFinishing) return;
         if (!speechAvailable || recognizer == null) {
             showTypedFallback();
             if (statusText != null) statusText.setText("Speech recognition is unavailable. Type your Spanish answer.");
@@ -463,26 +534,135 @@ public final class MainActivity extends Activity implements TextToSpeech.OnInitL
             requestPermissions(new String[] { Manifest.permission.RECORD_AUDIO }, AUDIO_PERMISSION);
             return;
         }
-        startListening();
+
+        stopListening();
+        answerBuffer.setLength(0);
+        lastCommittedChunk = "";
+        lastPartial = "";
+        recognitionErrors = 0;
+        answerCaptureActive = true;
+        answerFinishing = false;
+        captureGeneration++;
+        updateMicButton();
+        if (statusText != null) {
+            statusText.setText("Listening — pause as needed. Press Finish Answer when you are done.");
+        }
+        startRecognitionChunk();
     }
 
-    private void startListening() {
-        if (!sessionActive || recognizer == null || listening) return;
+    private void finishAnswerCapture() {
+        if (!sessionActive || !answerCaptureActive || answerFinishing) return;
+        answerCaptureActive = false;
+        answerFinishing = true;
+        captureGeneration++;
+        updateMicButton();
+        if (statusText != null) statusText.setText("Finishing your answer…");
+
+        if (recognizer != null && listening) {
+            try {
+                recognizer.stopListening();
+            } catch (Exception ignored) {
+                finalizeAnswerCapture();
+                return;
+            }
+            handler.postDelayed(() -> {
+                if (sessionActive && answerFinishing) finalizeAnswerCapture();
+            }, 1600);
+        } else {
+            handler.postDelayed(() -> {
+                if (sessionActive && answerFinishing) finalizeAnswerCapture();
+            }, 100);
+        }
+    }
+
+    private void finalizeAnswerCapture() {
+        if (!answerFinishing) return;
+        if (!lastPartial.isEmpty()) appendChunk(lastPartial);
+        lastPartial = "";
+        listening = false;
+        answerFinishing = false;
+        answerCaptureActive = false;
+        captureGeneration++;
+        updateMicButton();
+
+        String answer = answerBuffer.toString().trim();
+        answerBuffer.setLength(0);
+        lastCommittedChunk = "";
+
+        if (answer.isEmpty()) {
+            if (statusText != null) statusText.setText("I did not capture any words. Press Start Answer and try again.");
+            return;
+        }
+
+        if (statusText != null) statusText.setText("Checking your full answer…");
+        handleAnswer(answer);
+    }
+
+    private void appendChunk(String value) {
+        if (value == null) return;
+        String chunk = value.trim();
+        if (chunk.isEmpty()) return;
+        if (chunk.equalsIgnoreCase(lastCommittedChunk)) return;
+        if (answerBuffer.length() > 0) answerBuffer.append(' ');
+        answerBuffer.append(chunk);
+        lastCommittedChunk = chunk;
+    }
+
+    private void scheduleRecognitionRestart(long delayMs) {
+        final int generation = captureGeneration;
+        handler.postDelayed(() -> {
+            if (!sessionActive || !answerCaptureActive || answerFinishing || listening) return;
+            if (generation != captureGeneration) return;
+            startRecognitionChunk();
+        }, delayMs);
+    }
+
+    private void startRecognitionChunk() {
+        if (!sessionActive || !answerCaptureActive || answerFinishing || recognizer == null || listening) return;
         if (tts != null && tts.isSpeaking()) tts.stop();
+        lastPartial = "";
         try {
             recognizer.startListening(speechIntent);
         } catch (Exception e) {
-            showTypedFallback();
-            if (statusText != null) statusText.setText("The microphone could not start. Type your Spanish answer.");
+            recognitionErrors++;
+            if (recognitionErrors >= 3) {
+                answerCaptureActive = false;
+                captureGeneration++;
+                updateMicButton();
+                showTypedFallback();
+                if (statusText != null) statusText.setText("The microphone could not restart. Press Start Answer to retry or type your answer.");
+            } else {
+                scheduleRecognitionRestart(600);
+            }
         }
     }
 
     private void stopListening() {
+        captureGeneration++;
+        answerCaptureActive = false;
+        answerFinishing = false;
         if (recognizer != null && listening) {
             try { recognizer.cancel(); } catch (Exception ignored) {}
         }
         listening = false;
-        if (micButton != null) micButton.setText("Answer now");
+        answerBuffer.setLength(0);
+        lastPartial = "";
+        lastCommittedChunk = "";
+        updateMicButton();
+    }
+
+    private void updateMicButton() {
+        if (micButton == null) return;
+        if (answerFinishing) {
+            micButton.setText("Finishing…");
+            micButton.setEnabled(false);
+        } else if (answerCaptureActive) {
+            micButton.setText("Finish Answer");
+            micButton.setEnabled(true);
+        } else {
+            micButton.setText("Start Answer");
+            micButton.setEnabled(true);
+        }
     }
 
     private void showTypedFallback() {
@@ -493,7 +673,7 @@ public final class MainActivity extends Activity implements TextToSpeech.OnInitL
     @Override public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
         if (requestCode == AUDIO_PERMISSION) {
-            if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) startListening();
+            if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) beginAnswerCapture();
             else {
                 showTypedFallback();
                 if (statusText != null) statusText.setText("Microphone permission was denied. Type your Spanish answer instead.");
@@ -520,7 +700,9 @@ public final class MainActivity extends Activity implements TextToSpeech.OnInitL
         });
         if (sessionActive && pendingSessionStart) {
             pendingSessionStart = false;
-            speakEnglish("Conversation started. I will ask questions in Spanish. Answer naturally in Spanish. I will show meaningful corrections and explain them in English.", "SESSION_INTRO");
+            speakEnglish(
+                "Conversation started. I will ask questions in Spanish. Answer naturally in Spanish. Pause whenever you need to think. I will keep listening across pauses and will not submit your answer until you press Finish Answer. Meaningful corrections will appear on the screen with explanations in English.",
+                "SESSION_INTRO");
         }
     }
 
@@ -529,8 +711,8 @@ public final class MainActivity extends Activity implements TextToSpeech.OnInitL
         if ("SESSION_INTRO".equals(id)) {
             handler.postDelayed(this::nextQuestion, 350);
         } else if ("PROMPT".equals(id) || "REPEAT".equals(id)) {
-            if (statusText != null) statusText.setText("Listening…");
-            handler.postDelayed(this::listen, 450);
+            if (statusText != null) statusText.setText("Preparing to listen…");
+            handler.postDelayed(this::beginAnswerCapture, 450);
         } else if ("FEEDBACK".equals(id)) {
             handler.postDelayed(this::nextQuestion, 650);
         }
@@ -561,6 +743,7 @@ public final class MainActivity extends Activity implements TextToSpeech.OnInitL
     @Override protected void onDestroy() {
         sessionActive = false;
         pendingSessionStart = false;
+        stopListening();
         handler.removeCallbacksAndMessages(null);
         if (recognizer != null) {
             try { recognizer.destroy(); } catch (Exception ignored) {}
