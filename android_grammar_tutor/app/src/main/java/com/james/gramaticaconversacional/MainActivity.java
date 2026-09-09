@@ -5,8 +5,10 @@ import android.app.Activity;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
+import android.content.res.ColorStateList;
 import android.graphics.Color;
 import android.graphics.Typeface;
+import android.graphics.drawable.GradientDrawable;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
@@ -15,128 +17,558 @@ import android.speech.RecognizerIntent;
 import android.speech.SpeechRecognizer;
 import android.speech.tts.TextToSpeech;
 import android.speech.tts.UtteranceProgressListener;
+import android.view.Gravity;
 import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.LinearLayout;
-import android.widget.ProgressBar;
 import android.widget.ScrollView;
-import android.widget.Switch;
 import android.widget.TextView;
-import android.widget.Toast;
-import java.text.Normalizer;
+import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Locale;
 
 public final class MainActivity extends Activity implements TextToSpeech.OnInitListener {
     private static final int AUDIO_PERMISSION = 7001;
-    private static final String[] KEYS={"yo","tu","el","nosotros","ellos"};
-    private static final String[] LABELS={"yo","tú","él / ella / usted","nosotros","ustedes / ellos / ellas"};
-    private static final String[] FORMS={"tengo","tienes","tiene","tenemos","tienen"};
-    private final int[] mastery=new int[5];
-    private final Handler handler=new Handler(Looper.getMainLooper());
+    private static final int BG = Color.rgb(15, 18, 23);
+    private static final int PANEL = Color.rgb(27, 32, 40);
+    private static final int TEXT = Color.rgb(244, 246, 248);
+    private static final int MUTED = Color.rgb(179, 188, 201);
+    private static final int ACCENT = Color.rgb(93, 146, 230);
+    private static final int BORDER = Color.rgb(63, 72, 86);
+
+    private final Handler handler = new Handler(Looper.getMainLooper());
+    private final ArrayDeque<Integer> weakPrompts = new ArrayDeque<>();
     private SharedPreferences prefs;
-    private TextView stageText, masteryText, promptText, hintText, heardText, feedbackText, statusText;
-    private ProgressBar masteryBar;
-    private EditText typed;
-    private Switch autoSwitch;
-    private Button startButton, micButton;
     private TextToSpeech tts;
-    private boolean ttsReady=false, running=false, listening=false;
     private SpeechRecognizer recognizer;
     private Intent speechIntent;
-    private int promptCounter=0, target=0, recovery=-1, transfer=-1, rapidStreak=0;
-    private String expected="tengo", model="Yo tengo tiempo hoy.";
+    private boolean ttsReady = false;
+    private boolean speechAvailable = false;
+    private boolean sessionActive = false;
+    private boolean listening = false;
+    private boolean pendingSessionStart = false;
+    private int promptCursor = 0;
+    private int sessionTurns = 0;
+    private int sessionCorrections = 0;
+    private int sessionGrammar = 0;
+    private int sessionTransfer = 0;
+    private int sessionTarget = 0;
+    private int sessionNatural = 0;
+    private int recognitionErrors = 0;
+    private TutorContent.Prompt currentPrompt;
+    private TextView statusText;
+    private TextView fallbackQuestion;
+    private LinearLayout correctionList;
+    private Button micButton;
+    private EditText typedFallback;
+    private Button typedSubmit;
 
-    @Override protected void onCreate(Bundle b){
-        super.onCreate(b);
-        prefs=getSharedPreferences("grammar_progress",MODE_PRIVATE);
-        for(int i=0;i<5;i++) mastery[i]=prefs.getInt(KEYS[i],0);
-        buildUi();
-        tts=new TextToSpeech(this,this);
+    @Override protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        prefs = getSharedPreferences("conversation_tutor_progress", MODE_PRIVATE);
+        buildMainScreen();
+        tts = new TextToSpeech(this, this);
         setupRecognizer();
-        updateProgress();
     }
 
-    private TextView tv(String text,int sp,int color){ TextView v=new TextView(this); v.setText(text); v.setTextSize(sp); v.setTextColor(color); v.setPadding(0,6,0,6); return v; }
-    private Button btn(String text){ Button b=new Button(this); b.setText(text); b.setTextAllCaps(false); return b; }
-    private void buildUi(){
-        int bg=Color.rgb(16,19,24), white=Color.rgb(244,246,248), sub=Color.rgb(183,192,204), accent=Color.rgb(127,179,255);
-        ScrollView sv=new ScrollView(this); sv.setBackgroundColor(bg);
-        LinearLayout root=new LinearLayout(this); root.setOrientation(LinearLayout.VERTICAL); root.setPadding(dp(18),dp(28),dp(18),dp(28)); sv.addView(root);
-        TextView title=tv("Gramática Conversacional",28,white); title.setTypeface(Typeface.DEFAULT,Typeface.BOLD); root.addView(title);
-        root.addView(tv("Tutor verbal · español latinoamericano",15,sub));
-        TextView topic=tv("TENER · presente de indicativo",21,accent); topic.setTypeface(Typeface.DEFAULT,Typeface.BOLD); topic.setPadding(0,dp(18),0,dp(6)); root.addView(topic);
-        root.addView(tv("yo tengo · tú tienes · él/ella/usted tiene · nosotros tenemos · ustedes/ellos/ellas tienen\n\nPatrón: yo usa teng-, varias formas usan tien-, y nosotros vuelve a ten-. También practicaremos tener que + infinitivo.",16,white));
-        stageText=tv("",14,sub); root.addView(stageText);
-        masteryBar=new ProgressBar(this,null,android.R.attr.progressBarStyleHorizontal); masteryBar.setMax(100); root.addView(masteryBar,new LinearLayout.LayoutParams(-1,dp(12)));
-        masteryText=tv("",13,sub); root.addView(masteryText);
-        autoSwitch=new Switch(this); autoSwitch.setText("Modo conversación automática"); autoSwitch.setTextColor(white); autoSwitch.setChecked(true); root.addView(autoSwitch);
-        TextView turn=tv("TU TURNO",12,sub); turn.setTypeface(Typeface.DEFAULT,Typeface.BOLD); turn.setPadding(0,dp(16),0,0); root.addView(turn);
-        promptText=tv("Pulsa Comenzar. Trabajaremos este tema hasta que las formas salgan automáticamente.",23,white); promptText.setTypeface(Typeface.DEFAULT,Typeface.BOLD); root.addView(promptText);
-        hintText=tv("Si fallas una forma, vuelve inmediatamente y después reaparece en otro contexto.",14,sub); root.addView(hintText);
-        heardText=tv("",15,accent); root.addView(heardText);
-        feedbackText=tv("",16,white); root.addView(feedbackText);
-        statusText=tv("Preparado.",13,sub); root.addView(statusText);
-        startButton=btn("Comenzar"); root.addView(startButton); startButton.setOnClickListener(v->{ if(running) pause(); else start(); });
-        LinearLayout row1=new LinearLayout(this); row1.setOrientation(LinearLayout.HORIZONTAL); root.addView(row1);
-        Button listen=btn("Escuchar"); micButton=btn("Responder 🎙"); row1.addView(listen,new LinearLayout.LayoutParams(0,-2,1)); row1.addView(micButton,new LinearLayout.LayoutParams(0,-2,1));
-        listen.setOnClickListener(v->speak(promptText.getText().toString(),"MANUAL")); micButton.setOnClickListener(v->listen());
-        LinearLayout row2=new LinearLayout(this); row2.setOrientation(LinearLayout.HORIZONTAL); root.addView(row2);
-        Button show=btn("Mostrar respuesta"), next=btn("Siguiente"); row2.addView(show,new LinearLayout.LayoutParams(0,-2,1)); row2.addView(next,new LinearLayout.LayoutParams(0,-2,1));
-        show.setOnClickListener(v->reveal()); next.setOnClickListener(v->nextPrompt(false));
-        typed=new EditText(this); typed.setHint("Respuesta escrita"); typed.setTextColor(white); typed.setHintTextColor(sub); typed.setSingleLine(true); root.addView(typed);
-        Button check=btn("Comprobar"); root.addView(check); check.setOnClickListener(v->{String s=typed.getText().toString(); if(!s.trim().isEmpty()) evaluate(s);});
-        Button reset=btn("Reiniciar dominio de este tema"); root.addView(reset); reset.setOnClickListener(v->reset());
-        setContentView(sv);
+    private int dp(int value) {
+        return (int) (value * getResources().getDisplayMetrics().density + 0.5f);
     }
-    private int dp(int n){return (int)(n*getResources().getDisplayMetrics().density+0.5f);}
 
-    private void start(){ running=true; startButton.setText("Pausar"); statusText.setText("Sesión activa."); speak("Vamos a trabajar un solo tema hasta que sea automático: el presente de tener. Yo tengo, tú tienes, él, ella o usted tiene, nosotros tenemos, ustedes, ellos o ellas tienen.","INTRO"); if(!ttsReady) nextPrompt(false); }
-    private void pause(){ running=false; startButton.setText("Continuar"); stopListening(); if(tts!=null)tts.stop(); statusText.setText("Sesión pausada."); }
-
-    private int stage(){ int min=5; for(int x:mastery)min=Math.min(min,x); if(min<=0)return 0; if(min==1)return 1; if(min==2)return 2; if(min==3)return 3; if(min==4)return 4; return 5; }
-    private String stageName(){String[] s={"Formas","Transformación","Contexto","Conversación","Fluidez","Dominado"}; return s[stage()];}
-    private int weakest(){int m=99,idx=0; for(int i=0;i<5;i++){if(mastery[i]<m){m=mastery[i];idx=i;}} return idx;}
-    private void nextPrompt(boolean speakIt){
-        if(!running){running=true;startButton.setText("Pausar");}
-        stopListening(); typed.setText(""); heardText.setText(""); feedbackText.setText(""); promptCounter++;
-        int st=stage(); if(st==5){promptText.setText("Tema dominado. Reinícialo cuando quieras otra vuelta de consolidación."); hintText.setText(""); updateProgress(); return;}
-        if(recovery>=0){target=recovery; expected=FORMS[target]; model=LABELS[target]+" "+FORMS[target]; promptText.setText("Corrección: "+correction(target)+" Repite: "+model+"."); hintText.setText("Recuperación inmediata.");}
-        else if(transfer>=0){target=transfer; transfer=-1; setTransferPrompt(target); hintText.setText("Transferencia: la misma forma vuelve en otro contexto.");}
-        else {target=weakest(); setNormalPrompt(target,st); hintText.setText(st>=3?"Responde con una frase natural.":"Responde en voz alta.");}
-        statusText.setText("Listo para tu respuesta."); updateProgress(); if(speakIt&&ttsReady)speak(promptText.getText().toString(),"PROMPT");
+    private TextView text(String value, int sp, int color) {
+        TextView v = new TextView(this);
+        v.setText(value);
+        v.setTextSize(sp);
+        v.setTextColor(color);
+        v.setLineSpacing(0f, 1.12f);
+        return v;
     }
-    private void setNormalPrompt(int i,int st){ expected=FORMS[i]; String l=LABELS[i];
-        if(st==0){promptText.setText(promptCounter%2==0?"Di la forma de tener para "+l+".":"Completa: "+capital(l)+" ___ tiempo hoy."); model=capital(l)+" "+expected+" tiempo hoy.";}
-        else if(st==1){String from=i==0?"Ella tiene una reunión.":"Yo tengo una reunión."; promptText.setText("Cambia la frase para hablar de "+l+": "+from); model=capital(l)+" "+expected+" una reunión.";}
-        else if(st==2){promptText.setText("Completa en contexto: "+capital(l)+" ___ una cita mañana."); model=capital(l)+" "+expected+" una cita mañana.";}
-        else if(st==3){ if(i==0){promptText.setText("¿Qué tienes que hacer mañana? Responde usando tener que."); model="Mañana tengo que hacer ejercicio.";} else {promptText.setText("Usa tener en una frase natural hablando de "+l+"."); model=capital(l)+" "+expected+" tiempo mañana.";} }
-        else {promptText.setText(capital(l)+": tener."); model=capital(l)+" "+expected+".";}
+
+    private Button button(String label) {
+        Button b = new Button(this);
+        b.setText(label);
+        b.setAllCaps(false);
+        b.setTextColor(TEXT);
+        b.setTextSize(15);
+        b.setMinHeight(dp(48));
+        b.setBackgroundTintList(ColorStateList.valueOf(ACCENT));
+        return b;
     }
-    private void setTransferPrompt(int i){expected=FORMS[i]; promptText.setText("Ahora úsalo en otra frase: "+capital(LABELS[i])+" ___ una pregunta."); model=capital(LABELS[i])+" "+expected+" una pregunta.";}
-    private String correction(int i){ if(i==0)return "Con yo, tener es irregular: yo tengo."; if(i==1)return "Con tú: tú tienes."; if(i==2)return "Con él, ella o usted: tiene."; if(i==3)return "Con nosotros: tenemos; aquí no hay cambio de raíz."; return "Con ustedes, ellos o ellas: tienen."; }
-    private String capital(String s){return s.substring(0,1).toUpperCase(new Locale("es"))+s.substring(1);}
 
-    private void evaluate(String answer){String a=norm(answer), token=norm(expected); heardText.setText("Te entendí: "+answer); boolean ok=containsWord(a,token); if(target==0 && promptText.getText().toString().contains("tener que")) ok=a.contains("tengo que");
-        if(ok){ if(recovery==target){recovery=-1; transfer=target; feedbackText.setText("Correcto. Ahora comprobaré que puedas transferir esa forma.");} else {mastery[target]=Math.min(5,mastery[target]+1); if(stage()==4)rapidStreak++; feedbackText.setText("Correcto: "+model); } save(); updateProgress(); speak(feedbackText.getText().toString(),autoSwitch.isChecked()&&running?"FEEDBACK":"MANUAL"); }
-        else {mastery[target]=Math.max(0,mastery[target]-1); recovery=target; rapidStreak=0; feedbackText.setText("Aún no. "+correction(target)+" La respuesta modelo es: "+model); save(); updateProgress(); speak(feedbackText.getText().toString(),autoSwitch.isChecked()&&running?"FEEDBACK":"MANUAL"); }
+    private GradientDrawable panelBackground() {
+        GradientDrawable g = new GradientDrawable();
+        g.setColor(PANEL);
+        g.setCornerRadius(dp(14));
+        g.setStroke(dp(1), BORDER);
+        return g;
     }
-    private boolean containsWord(String a,String token){for(String w:a.split("[^a-z]+"))if(w.equals(token))return true;return false;}
-    private String norm(String s){String n=Normalizer.normalize(s.toLowerCase(new Locale("es")),Normalizer.Form.NFD).replaceAll("\\p{M}+",""); return n.replace('ñ','n').replaceAll("[^a-z ]"," ").replaceAll("\\s+"," ").trim();}
-    private void reveal(){if(!running||stage()==5)return; mastery[target]=Math.max(0,mastery[target]-1); recovery=target; rapidStreak=0; feedbackText.setText("Respuesta: "+model+". "+correction(target)); save(); updateProgress(); speak(feedbackText.getText().toString(),autoSwitch.isChecked()?"FEEDBACK":"MANUAL");}
-    private void updateProgress(){int total=0;for(int x:mastery)total+=x;int pct=(int)Math.round(total/25.0*100);masteryBar.setProgress(pct);stageText.setText("Etapa: "+stageName());masteryText.setText(pct+"% de dominio · punto más débil: "+LABELS[weakest()]);}
-    private void save(){SharedPreferences.Editor e=prefs.edit();for(int i=0;i<5;i++)e.putInt(KEYS[i],mastery[i]);e.apply();}
-    private void reset(){pause();for(int i=0;i<5;i++)mastery[i]=0;recovery=transfer=-1;rapidStreak=0;save();updateProgress();promptText.setText("Pulsa Comenzar para iniciar de nuevo.");feedbackText.setText("");heardText.setText("");Toast.makeText(this,"Progreso reiniciado",Toast.LENGTH_SHORT).show();}
 
-    private void setupRecognizer(){if(!SpeechRecognizer.isRecognitionAvailable(this)){micButton.setEnabled(false);statusText.setText("Reconocimiento de voz no disponible. Usa respuesta escrita.");return;} recognizer=SpeechRecognizer.createSpeechRecognizer(this);speechIntent=new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH);speechIntent.putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL,RecognizerIntent.LANGUAGE_MODEL_FREE_FORM);speechIntent.putExtra(RecognizerIntent.EXTRA_LANGUAGE,"es-PA");speechIntent.putExtra(RecognizerIntent.EXTRA_MAX_RESULTS,3);recognizer.setRecognitionListener(new RecognitionListener(){public void onReadyForSpeech(Bundle p){listening=true;micButton.setText("Escuchando…");}public void onBeginningOfSpeech(){}public void onRmsChanged(float r){}public void onBufferReceived(byte[] b){}public void onEndOfSpeech(){statusText.setText("Procesando…");}public void onError(int e){listening=false;micButton.setText("Responder 🎙");statusText.setText("No pude reconocer la respuesta. Intenta otra vez o escribe.");}public void onResults(Bundle b){listening=false;micButton.setText("Responder 🎙");ArrayList<String> m=b.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION);if(m!=null&&!m.isEmpty())evaluate(m.get(0));}public void onPartialResults(Bundle b){}public void onEvent(int t,Bundle b){}});}
-    private void listen(){if(!running||stage()==5)return;if(checkSelfPermission(Manifest.permission.RECORD_AUDIO)!=PackageManager.PERMISSION_GRANTED){requestPermissions(new String[]{Manifest.permission.RECORD_AUDIO},AUDIO_PERMISSION);return;}startListening();}
-    private void startListening(){if(recognizer==null||listening)return;if(tts!=null&&tts.isSpeaking())tts.stop();try{recognizer.startListening(speechIntent);}catch(Exception e){statusText.setText("No pude iniciar el micrófono.");}}
-    private void stopListening(){if(recognizer!=null&&listening)try{recognizer.cancel();}catch(Exception ignored){}listening=false;if(micButton!=null)micButton.setText("Responder 🎙");}
-    @Override public void onRequestPermissionsResult(int r,String[] p,int[] g){super.onRequestPermissionsResult(r,p,g);if(r==AUDIO_PERMISSION&&g.length>0&&g[0]==PackageManager.PERMISSION_GRANTED)startListening();}
+    private void addSpacer(LinearLayout root, int height) {
+        View spacer = new View(this);
+        root.addView(spacer, new LinearLayout.LayoutParams(1, dp(height)));
+    }
 
-    @Override public void onInit(int status){if(status!=TextToSpeech.SUCCESS){statusText.setText("La voz no pudo iniciarse; puedes practicar por escrito.");return;}int r=tts.setLanguage(new Locale("es","PA"));if(r<0)r=tts.setLanguage(new Locale("es","MX"));if(r<0)tts.setLanguage(new Locale("es"));tts.setSpeechRate(.92f);ttsReady=true;tts.setOnUtteranceProgressListener(new UtteranceProgressListener(){public void onStart(String id){}public void onError(String id){}public void onDone(String id){runOnUiThread(()->speechDone(id));}});}
-    private void speechDone(String id){if(!running)return;if("INTRO".equals(id))nextPrompt(autoSwitch.isChecked());else if("PROMPT".equals(id)&&autoSwitch.isChecked())handler.postDelayed(this::listen,400);else if("FEEDBACK".equals(id)&&autoSwitch.isChecked())handler.postDelayed(()->nextPrompt(true),650);}
-    private void speak(String text,String id){if(!ttsReady||text==null)return;stopListening();tts.speak(text,TextToSpeech.QUEUE_FLUSH,null,id);}
-    @Override protected void onDestroy(){running=false;if(recognizer!=null)try{recognizer.destroy();}catch(Exception ignored){}if(tts!=null){tts.stop();tts.shutdown();}super.onDestroy();}
+    private LinearLayout baseRoot() {
+        LinearLayout root = new LinearLayout(this);
+        root.setOrientation(LinearLayout.VERTICAL);
+        root.setPadding(dp(18), dp(28), dp(18), dp(28));
+        root.setBackgroundColor(BG);
+        return root;
+    }
+
+    private ScrollView scrollWith(LinearLayout root) {
+        ScrollView scroll = new ScrollView(this);
+        scroll.setFillViewport(true);
+        scroll.setBackgroundColor(BG);
+        scroll.addView(root);
+        return scroll;
+    }
+
+    private void buildMainScreen() {
+        sessionActive = false;
+        stopListening();
+        if (tts != null) tts.stop();
+
+        LinearLayout root = baseRoot();
+        TextView title = text("Gramática Conversacional", 29, TEXT);
+        title.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
+        root.addView(title);
+        TextView sub = text("Conversational Latin American Spanish tutor", 15, MUTED);
+        sub.setPadding(0, dp(3), 0, 0);
+        root.addView(sub);
+
+        addSpacer(root, 22);
+        LinearLayout focus = new LinearLayout(this);
+        focus.setOrientation(LinearLayout.VERTICAL);
+        focus.setPadding(dp(16), dp(15), dp(16), dp(15));
+        focus.setBackground(panelBackground());
+        TextView focusTitle = text("CURRENT LEARNING FOCUS", 12, MUTED);
+        focusTitle.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
+        focus.addView(focusTitle);
+        addSpacer(focus, 7);
+        focus.addView(text(
+            "Use Spanish in real conversation while the tutor quietly trains verb tense, mood and person. Current verb system: TENER across present, preterite, imperfect, perfect, future, conditional and subjunctive.",
+            16, TEXT));
+        addSpacer(focus, 10);
+        focus.addView(text(
+            "Persons: yo · tú · él · ella · usted · nosotros/nosotras · ustedes · ellos/ellas. Vosotros is intentionally omitted.",
+            14, MUTED));
+        addSpacer(focus, 10);
+        focus.addView(text(
+            "Every answer is also checked for articles, agreement, tense/mood, person agreement, common English-to-Spanish transfer patterns and more natural conversational structure.",
+            14, MUTED));
+        root.addView(focus);
+
+        addSpacer(root, 18);
+        TextView languageRule = text("Questions are in Spanish. Grammar explanations and learning instructions are in English.", 14, MUTED);
+        root.addView(languageRule);
+
+        int lastTurns = prefs.getInt("last_turns", 0);
+        if (lastTurns > 0) {
+            addSpacer(root, 20);
+            TextView lastTitle = text("LAST SESSION", 12, MUTED);
+            lastTitle.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
+            root.addView(lastTitle);
+            String summary = lastTurns + " conversational turns · " + prefs.getInt("last_corrections", 0) + " corrections\n"
+                + prefs.getInt("last_target", 0) + " verb/tense · "
+                + prefs.getInt("last_grammar", 0) + " grammar · "
+                + prefs.getInt("last_transfer", 0) + " English-transfer/native structure";
+            TextView summaryView = text(summary, 15, TEXT);
+            summaryView.setPadding(0, dp(8), 0, 0);
+            root.addView(summaryView);
+        }
+
+        addSpacer(root, 24);
+        Button start = button("Start Conversation");
+        start.setOnClickListener(v -> startSession());
+        root.addView(start);
+
+        addSpacer(root, 12);
+        TextView help = text("During the session the screen clears. Correct answers leave it clear; only meaningful corrections remain visible until you end the conversation.", 13, MUTED);
+        root.addView(help);
+
+        setContentView(scrollWith(root));
+    }
+
+    private void buildSessionScreen() {
+        LinearLayout outer = baseRoot();
+
+        LinearLayout header = new LinearLayout(this);
+        header.setOrientation(LinearLayout.HORIZONTAL);
+        header.setGravity(Gravity.CENTER_VERTICAL);
+        TextView active = text("Conversation active", 16, TEXT);
+        active.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
+        header.addView(active, new LinearLayout.LayoutParams(0, -2, 1f));
+        Button stop = button("Stop Session");
+        stop.setMinHeight(dp(42));
+        stop.setOnClickListener(v -> endSession());
+        header.addView(stop, new LinearLayout.LayoutParams(-2, dp(46)));
+        outer.addView(header);
+
+        statusText = text("Starting…", 13, MUTED);
+        statusText.setPadding(0, dp(9), 0, dp(8));
+        outer.addView(statusText);
+
+        fallbackQuestion = text("", 19, TEXT);
+        fallbackQuestion.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
+        fallbackQuestion.setVisibility(View.GONE);
+        fallbackQuestion.setPadding(0, dp(8), 0, dp(12));
+        outer.addView(fallbackQuestion);
+
+        ScrollView correctionsScroll = new ScrollView(this);
+        correctionList = new LinearLayout(this);
+        correctionList.setOrientation(LinearLayout.VERTICAL);
+        correctionsScroll.addView(correctionList);
+        outer.addView(correctionsScroll, new LinearLayout.LayoutParams(-1, 0, 1f));
+
+        LinearLayout controls = new LinearLayout(this);
+        controls.setOrientation(LinearLayout.HORIZONTAL);
+        Button repeat = button("Repeat question");
+        repeat.setOnClickListener(v -> repeatQuestion());
+        micButton = button("Answer now");
+        micButton.setOnClickListener(v -> listen());
+        controls.addView(repeat, new LinearLayout.LayoutParams(0, dp(50), 1f));
+        LinearLayout.LayoutParams micParams = new LinearLayout.LayoutParams(0, dp(50), 1f);
+        micParams.setMargins(dp(8), 0, 0, 0);
+        controls.addView(micButton, micParams);
+        outer.addView(controls);
+
+        typedFallback = new EditText(this);
+        typedFallback.setHint("Type your Spanish answer");
+        typedFallback.setTextColor(TEXT);
+        typedFallback.setHintTextColor(MUTED);
+        typedFallback.setTextSize(16);
+        typedFallback.setSingleLine(false);
+        typedFallback.setMinHeight(dp(56));
+        typedFallback.setVisibility(View.GONE);
+        outer.addView(typedFallback);
+
+        typedSubmit = button("Submit typed answer");
+        typedSubmit.setVisibility(View.GONE);
+        typedSubmit.setOnClickListener(v -> {
+            String value = typedFallback.getText().toString().trim();
+            if (!value.isEmpty()) {
+                typedFallback.setText("");
+                handleAnswer(value);
+            }
+        });
+        outer.addView(typedSubmit);
+
+        setContentView(outer);
+    }
+
+    private void startSession() {
+        sessionActive = true;
+        sessionTurns = 0;
+        sessionCorrections = 0;
+        sessionGrammar = 0;
+        sessionTransfer = 0;
+        sessionTarget = 0;
+        sessionNatural = 0;
+        recognitionErrors = 0;
+        promptCursor = prefs.getInt("prompt_cursor", 0) % TutorContent.PROMPTS.length;
+        weakPrompts.clear();
+        buildSessionScreen();
+
+        if (ttsReady) {
+            speakEnglish("Conversation started. I will ask questions in Spanish. Answer naturally in Spanish. If I hear a meaningful error, I will put the correction and the English explanation on the screen.", "SESSION_INTRO");
+        } else {
+            pendingSessionStart = true;
+            statusText.setText("Preparing voice…");
+            handler.postDelayed(() -> {
+                if (sessionActive && !ttsReady && pendingSessionStart) {
+                    pendingSessionStart = false;
+                    statusText.setText("Voice is unavailable. The conversation can continue with displayed questions and typed answers.");
+                    showTypedFallback();
+                    nextQuestion();
+                }
+            }, 3500);
+        }
+    }
+
+    private void endSession() {
+        if (!sessionActive) return;
+        sessionActive = false;
+        pendingSessionStart = false;
+        stopListening();
+        if (tts != null) tts.stop();
+        prefs.edit()
+            .putInt("last_turns", sessionTurns)
+            .putInt("last_corrections", sessionCorrections)
+            .putInt("last_grammar", sessionGrammar)
+            .putInt("last_transfer", sessionTransfer + sessionNatural)
+            .putInt("last_target", sessionTarget)
+            .putInt("prompt_cursor", promptCursor)
+            .apply();
+        buildMainScreen();
+    }
+
+    private void nextQuestion() {
+        if (!sessionActive) return;
+        int index;
+        if (!weakPrompts.isEmpty() && sessionTurns > 0 && sessionTurns % 3 == 0) {
+            index = weakPrompts.removeFirst();
+        } else {
+            index = promptCursor % TutorContent.PROMPTS.length;
+            promptCursor = (promptCursor + 1) % TutorContent.PROMPTS.length;
+        }
+        currentPrompt = TutorContent.PROMPTS[index];
+        statusText.setText("Tutor speaking…");
+        fallbackQuestion.setVisibility(View.GONE);
+        if (ttsReady) {
+            speakSpanish(currentPrompt.question, "PROMPT");
+        } else {
+            fallbackQuestion.setText(currentPrompt.question);
+            fallbackQuestion.setVisibility(View.VISIBLE);
+            statusText.setText("Answer in Spanish.");
+            showTypedFallback();
+        }
+    }
+
+    private void repeatQuestion() {
+        if (!sessionActive || currentPrompt == null) return;
+        stopListening();
+        if (ttsReady) {
+            statusText.setText("Repeating…");
+            speakSpanish(currentPrompt.question, "REPEAT");
+        } else {
+            fallbackQuestion.setText(currentPrompt.question);
+            fallbackQuestion.setVisibility(View.VISIBLE);
+            showTypedFallback();
+        }
+    }
+
+    private void handleAnswer(String answer) {
+        if (!sessionActive || currentPrompt == null) return;
+        stopListening();
+        sessionTurns++;
+        GrammarEvaluator.Result result = GrammarEvaluator.evaluate(answer, currentPrompt);
+
+        if (result.corrections.isEmpty()) {
+            statusText.setText("Tutor continuing…");
+            handler.postDelayed(this::nextQuestion, 450);
+            return;
+        }
+
+        sessionCorrections += result.corrections.size();
+        for (GrammarEvaluator.Correction c : result.corrections) {
+            if (GrammarEvaluator.TARGET.equals(c.category)) sessionTarget++;
+            else if (GrammarEvaluator.GRAMMAR.equals(c.category)) sessionGrammar++;
+            else if (GrammarEvaluator.TRANSFER.equals(c.category)) sessionTransfer++;
+            else sessionNatural++;
+            addCorrectionCard(c);
+        }
+        if (result.hasTargetCorrection() && weakPrompts.size() < 8) weakPrompts.addLast(currentPrompt.index);
+
+        statusText.setText("Correction shown. Review it while we continue.");
+        if (ttsReady) {
+            String message = result.corrections.size() == 1
+                ? "I flagged one correction on the screen. Notice what you said, the better Spanish, and why."
+                : "I flagged several corrections on the screen. Review the corrected Spanish and the explanations.";
+            speakEnglish(message, "FEEDBACK");
+        } else {
+            handler.postDelayed(this::nextQuestion, 1100);
+        }
+    }
+
+    private void addCorrectionCard(GrammarEvaluator.Correction c) {
+        LinearLayout card = new LinearLayout(this);
+        card.setOrientation(LinearLayout.VERTICAL);
+        card.setPadding(dp(15), dp(14), dp(15), dp(14));
+        card.setBackground(panelBackground());
+
+        TextView saidLabel = text("YOU SAID", 11, MUTED);
+        saidLabel.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
+        card.addView(saidLabel);
+        TextView said = text(c.said, 18, TEXT);
+        said.setPadding(0, dp(4), 0, dp(12));
+        card.addView(said);
+
+        TextView betterLabel = text("SAY INSTEAD", 11, MUTED);
+        betterLabel.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
+        card.addView(betterLabel);
+        TextView better = text(c.better, 19, TEXT);
+        better.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
+        better.setPadding(0, dp(4), 0, dp(12));
+        card.addView(better);
+
+        TextView whyLabel = text("WHY", 11, MUTED);
+        whyLabel.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
+        card.addView(whyLabel);
+        TextView why = text(c.explanation, 15, MUTED);
+        why.setPadding(0, dp(4), 0, 0);
+        card.addView(why);
+
+        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(-1, -2);
+        lp.setMargins(0, 0, 0, dp(12));
+        correctionList.addView(card, 0, lp);
+    }
+
+    private void setupRecognizer() {
+        speechAvailable = SpeechRecognizer.isRecognitionAvailable(this);
+        if (!speechAvailable) return;
+        try {
+            recognizer = SpeechRecognizer.createSpeechRecognizer(this);
+            speechIntent = new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH);
+            speechIntent.putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM);
+            speechIntent.putExtra(RecognizerIntent.EXTRA_LANGUAGE, "es-PA");
+            speechIntent.putExtra(RecognizerIntent.EXTRA_LANGUAGE_PREFERENCE, "es-PA");
+            speechIntent.putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 3);
+            speechIntent.putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, false);
+            recognizer.setRecognitionListener(new RecognitionListener() {
+                public void onReadyForSpeech(Bundle params) {
+                    listening = true;
+                    recognitionErrors = 0;
+                    if (statusText != null) statusText.setText("Listening…");
+                    if (micButton != null) micButton.setText("Listening…");
+                }
+                public void onBeginningOfSpeech() {}
+                public void onRmsChanged(float rmsdB) {}
+                public void onBufferReceived(byte[] buffer) {}
+                public void onEndOfSpeech() { if (statusText != null) statusText.setText("Checking your Spanish…"); }
+                public void onError(int error) {
+                    listening = false;
+                    recognitionErrors++;
+                    if (micButton != null) micButton.setText("Answer now");
+                    if (statusText != null) statusText.setText("I did not get a clear answer. Try again or type it.");
+                    if (recognitionErrors >= 2) showTypedFallback();
+                }
+                public void onResults(Bundle results) {
+                    listening = false;
+                    if (micButton != null) micButton.setText("Answer now");
+                    ArrayList<String> matches = results.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION);
+                    if (matches != null && !matches.isEmpty()) handleAnswer(matches.get(0));
+                    else {
+                        if (statusText != null) statusText.setText("I did not catch that. Try again.");
+                    }
+                }
+                public void onPartialResults(Bundle partialResults) {}
+                public void onEvent(int eventType, Bundle params) {}
+            });
+        } catch (Exception ignored) {
+            speechAvailable = false;
+            recognizer = null;
+        }
+    }
+
+    private void listen() {
+        if (!sessionActive) return;
+        if (!speechAvailable || recognizer == null) {
+            showTypedFallback();
+            if (statusText != null) statusText.setText("Speech recognition is unavailable. Type your Spanish answer.");
+            return;
+        }
+        if (checkSelfPermission(Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
+            requestPermissions(new String[] { Manifest.permission.RECORD_AUDIO }, AUDIO_PERMISSION);
+            return;
+        }
+        startListening();
+    }
+
+    private void startListening() {
+        if (!sessionActive || recognizer == null || listening) return;
+        if (tts != null && tts.isSpeaking()) tts.stop();
+        try {
+            recognizer.startListening(speechIntent);
+        } catch (Exception e) {
+            showTypedFallback();
+            if (statusText != null) statusText.setText("The microphone could not start. Type your Spanish answer.");
+        }
+    }
+
+    private void stopListening() {
+        if (recognizer != null && listening) {
+            try { recognizer.cancel(); } catch (Exception ignored) {}
+        }
+        listening = false;
+        if (micButton != null) micButton.setText("Answer now");
+    }
+
+    private void showTypedFallback() {
+        if (typedFallback != null) typedFallback.setVisibility(View.VISIBLE);
+        if (typedSubmit != null) typedSubmit.setVisibility(View.VISIBLE);
+    }
+
+    @Override public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        if (requestCode == AUDIO_PERMISSION) {
+            if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) startListening();
+            else {
+                showTypedFallback();
+                if (statusText != null) statusText.setText("Microphone permission was denied. Type your Spanish answer instead.");
+            }
+        }
+    }
+
+    @Override public void onInit(int status) {
+        if (status != TextToSpeech.SUCCESS) {
+            ttsReady = false;
+            if (sessionActive) {
+                pendingSessionStart = false;
+                showTypedFallback();
+                if (statusText != null) statusText.setText("Voice is unavailable. Questions will be displayed.");
+                nextQuestion();
+            }
+            return;
+        }
+        ttsReady = true;
+        tts.setOnUtteranceProgressListener(new UtteranceProgressListener() {
+            public void onStart(String utteranceId) {}
+            public void onError(String utteranceId) {}
+            public void onDone(String utteranceId) { runOnUiThread(() -> speechFinished(utteranceId)); }
+        });
+        if (sessionActive && pendingSessionStart) {
+            pendingSessionStart = false;
+            speakEnglish("Conversation started. I will ask questions in Spanish. Answer naturally in Spanish. I will show meaningful corrections and explain them in English.", "SESSION_INTRO");
+        }
+    }
+
+    private void speechFinished(String id) {
+        if (!sessionActive) return;
+        if ("SESSION_INTRO".equals(id)) {
+            handler.postDelayed(this::nextQuestion, 350);
+        } else if ("PROMPT".equals(id) || "REPEAT".equals(id)) {
+            if (statusText != null) statusText.setText("Listening…");
+            handler.postDelayed(this::listen, 450);
+        } else if ("FEEDBACK".equals(id)) {
+            handler.postDelayed(this::nextQuestion, 650);
+        }
+    }
+
+    private void speakSpanish(String value, String id) {
+        if (!ttsReady || tts == null) return;
+        int result = tts.setLanguage(new Locale("es", "PA"));
+        if (result < 0) result = tts.setLanguage(new Locale("es", "MX"));
+        if (result < 0) tts.setLanguage(new Locale("es"));
+        tts.setSpeechRate(0.92f);
+        tts.speak(value, TextToSpeech.QUEUE_FLUSH, null, id);
+    }
+
+    private void speakEnglish(String value, String id) {
+        if (!ttsReady || tts == null) return;
+        int result = tts.setLanguage(Locale.US);
+        if (result < 0) tts.setLanguage(Locale.ENGLISH);
+        tts.setSpeechRate(0.96f);
+        tts.speak(value, TextToSpeech.QUEUE_FLUSH, null, id);
+    }
+
+    @Override public void onBackPressed() {
+        if (sessionActive) endSession();
+        else super.onBackPressed();
+    }
+
+    @Override protected void onDestroy() {
+        sessionActive = false;
+        pendingSessionStart = false;
+        handler.removeCallbacksAndMessages(null);
+        if (recognizer != null) {
+            try { recognizer.destroy(); } catch (Exception ignored) {}
+        }
+        if (tts != null) {
+            tts.stop();
+            tts.shutdown();
+        }
+        super.onDestroy();
+    }
 }
